@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mô Phỏng Tách Ghép Khối Chữ L 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #f0fdf4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* Style cho nhãn 3D */
+        .measure-label {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 4px 10px;
+            color: #1e3a8a;
+            font-weight: bold;
+            font-size: 14px;
+            pointer-events: none; /* Xuyên click */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        /* Tùy chỉnh thanh trượt (Slider) */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #2563eb;
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        /* Nút Tab */
+        .tab-btn.active {
+            background-color: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.39);
+        }
+        .tab-btn {
+            background-color: white;
+            color: #475569;
+            border-color: #cbd5e1;
+        }
+    </style>
+    <!-- Import map cho Three.js để code gọn gàng -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Khung chứa 3D -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Điều khiển (Bên dưới màn hình) -->
+    <div class="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur-md border-t border-slate-200 p-4 md:p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-3xl z-10 flex flex-col gap-4 max-w-4xl mx-auto left-1/2 -translate-x-1/2">
+        
+        <!-- Hàng 1: Chọn chế độ tách -->
+        <div class="flex justify-center gap-4">
+            <button id="btn-split-vertical" class="tab-btn active px-6 py-3 rounded-xl font-bold border-2 transition-all duration-300 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>
+                Cách 1: Tách Dọc
+            </button>
+            <button id="btn-split-horizontal" class="tab-btn px-6 py-3 rounded-xl font-bold border-2 transition-all duration-300 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M8 8l4-4 4 4M8 16l4 4 4-4"/></svg>
+                Cách 2: Tách Ngang
+            </button>
+        </div>
+
+        <!-- Hàng 2: Thanh kéo và Nút hệ thống -->
+        <div class="flex flex-col md:flex-row items-center gap-6 mt-2">
+            <!-- Thanh kéo -->
+            <div class="flex-1 w-full flex items-center gap-4">
+                <span class="font-bold text-slate-500 min-w-[50px] text-right">0%</span>
+                <input type="range" id="split-slider" min="0" max="100" value="0" class="flex-1">
+                <span class="font-bold text-slate-500 min-w-[50px]">100%</span>
+            </div>
+
+            <!-- Nút chức năng -->
+            <div class="flex gap-3 w-full md:w-auto justify-center">
+                <button id="btn-unit" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-4 py-2 rounded-lg font-semibold transition-colors border border-indigo-200">
+                    Ẩn/Hiện kích thước
+                </button>
+                <button id="btn-reset" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-colors border border-slate-300 flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Đặt lại
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-center text-sm text-slate-400 font-medium">
+            Kéo chuột để xoay camera • Cuộn chuột để phóng to/thu nhỏ
+        </div>
+    </div>
+
+    <!-- Script điều khiển 3D và Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 1. CẤU HÌNH CƠ BẢN ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8fafc); // Màu nền sáng dịu
+
+        // Camera
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(12, 12, 15);
+
+        // Renderers
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none'; // Để click xuyên qua nhãn xuống 3D
+        container.appendChild(labelRenderer.domElement);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 4, 0); // Focus vào giữa khối L
+
+        // Ánh sáng
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        // Lưới nền (Grid)
+        const gridHelper = new THREE.GridHelper(20, 20, 0x94a3b8, 0xe2e8f0);
+        scene.add(gridHelper);
+
+        // --- 2. TẠO KHỐI VÀ VẬT LIỆU ---
+        // Vật liệu chính và mặt cắt
+        const colorMain = 0x3b82f6; // Xanh dương
+        const colorCut = 0x2563eb;  // Xanh dương đậm hơn 1 chút cho mặt cắt
+        
+        const matMain = new THREE.MeshStandardMaterial({ color: colorMain, roughness: 0.3, metalness: 0.1 });
+        const matCut = new THREE.MeshStandardMaterial({ color: colorCut, roughness: 0.4, metalness: 0.1 });
+
+        // Tạo mảng vật liệu cho BoxGeometry (Thứ tự: right, left, top, bottom, front, back)
+        // Dùng để tạo mặt cắt có màu đậm hơn
+        const matsVertLeft = [matCut, matMain, matMain, matMain, matMain, matMain];   // Cắt bên phải
+        const matsVertRight = [matMain, matCut, matMain, matMain, matMain, matMain];  // Cắt bên trái
+        const matsHorizTop = [matMain, matMain, matMain, matCut, matMain, matMain];   // Cắt bên dưới
+        const matsHorizBottom = [matMain, matMain, matCut, matMain, matMain, matMain];// Cắt bên trên
+
+        // Hàm tạo khối có viền sáng
+        function createBlock(w, h, d, materials, x, y, z) {
+            const geometry = new THREE.BoxGeometry(w, h, d);
+            const mesh = new THREE.Mesh(geometry, materials);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            // Thêm viền (Edges)
+            const edges = new THREE.EdgesGeometry(geometry);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1e3a8a, linewidth: 2 }));
+            mesh.add(line);
+
+            return mesh;
+        }
+
+        // Kích thước tổng: Chiều dài 8, Cao 8, Chiều rộng(Z) 5
+        // --- CHẾ ĐỘ 1: TÁCH DỌC ---
+        const groupVertical = new THREE.Group();
+        // Khối bên trái: Chiều dài 3, Cao 8, Chiều rộng 5
+        const blockVLeft = createBlock(3, 8, 5, matsVertLeft, -2.5, 4, 0);
+        // Khối bên phải: Chiều dài 5, Cao 2, Chiều rộng 5
+        const blockVRight = createBlock(5, 2, 5, matsVertRight, 1.5, 1, 0);
+        
+        // Thêm mặt phẳng cắt ảo (Phát sáng nhẹ)
+        const cutPlaneVGeo = new THREE.PlaneGeometry(5, 8);
+        const cutPlaneVMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const cutPlaneV = new THREE.Mesh(cutPlaneVGeo, cutPlaneVMat);
+        cutPlaneV.rotation.y = Math.PI / 2;
+        cutPlaneV.position.set(-1, 4, 0); // Nằm giữa ranh giới
+        groupVertical.add(cutPlaneV);
+
+        groupVertical.add(blockVLeft);
+        groupVertical.add(blockVRight);
+        scene.add(groupVertical);
+
+        // --- CHẾ ĐỘ 2: TÁCH NGANG ---
+        const groupHorizontal = new THREE.Group();
+        // Khối bên trên: Chiều dài 3, Cao 6, Chiều rộng 5
+        const blockHTop = createBlock(3, 6, 5, matsHorizTop, -2.5, 5, 0);
+        // Khối bên dưới: Chiều dài 8, Cao 2, Chiều rộng 5
+        const blockHBottom = createBlock(8, 2, 5, matsHorizBottom, 0, 1, 0);
+        
+        // Mặt phẳng cắt ảo ngang
+        const cutPlaneHGeo = new THREE.PlaneGeometry(8, 5);
+        const cutPlaneHMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0, side: THREE.DoubleSide });
+        const cutPlaneH = new THREE.Mesh(cutPlaneHGeo, cutPlaneHMat);
+        cutPlaneH.rotation.x = Math.PI / 2;
+        cutPlaneH.position.set(0, 2, 0);
+        groupHorizontal.add(cutPlaneH);
+
+        groupHorizontal.add(blockHTop);
+        groupHorizontal.add(blockHBottom);
+        scene.add(groupHorizontal);
+        groupHorizontal.visible = false; // Ẩn mặc định
+
+        // --- 3. QUẢN LÝ NHÃN KÍCH THƯỚC (LABELS) ---
+        const allLabels = [];
+        let isLabelsVisible = true; // Cờ ẩn/hiện toàn bộ nhãn
+
+        function createLabel(value, position, parent, type) {
+            const div = document.createElement('div');
+            div.className = 'measure-label';
+            div.textContent = value + ' cm'; // Luôn kèm cm, ẩn hiện do cờ isLabelsVisible quyết định
+            
+            const label = new CSS2DObject(div);
+            label.position.copy(position);
+            parent.add(label);
+            
+            const labelData = {
+                object: label,
+                div: div,
+                value: value,
+                type: type // 'original' hoặc 'split'
+            };
+            allLabels.push(labelData);
+            return labelData;
+        }
+
+        // Tạo nhãn Tổng (Original) - Gắn vào cảnh chung
+        const originalLabelsGroup = new THREE.Group();
+        scene.add(originalLabelsGroup);
+        
+        createLabel(8, new THREE.Vector3(0, -0.5, 2.5), originalLabelsGroup, 'original');   // Tổng dài đáy
+        createLabel(8, new THREE.Vector3(-4.5, 4, 2.5), originalLabelsGroup, 'original'); // Tổng cao trái
+        createLabel(5, new THREE.Vector3(4.5, 1, 0), originalLabelsGroup, 'original');  // Chiều rộng (trục Z)
+        createLabel(3, new THREE.Vector3(-2.5, 8.5, 2.5), originalLabelsGroup, 'original'); // Dài đỉnh
+        createLabel(6, new THREE.Vector3(-0.5, 5, 2.5), originalLabelsGroup, 'original'); // Cao cạnh trong
+        createLabel(5, new THREE.Vector3(1.5, 2.5, 2.5), originalLabelsGroup, 'original');  // Dài thềm
+
+        // Nhãn khi Tách Dọc (Gắn vào từng khối con)
+        // Khối đứng (Trái)
+        createLabel(3, new THREE.Vector3(0, 4.5, 2.5), blockVLeft, 'split'); // Chiều dài
+        createLabel(8, new THREE.Vector3(-2, 0, 2.5), blockVLeft, 'split');  // Chiều cao
+        createLabel(5, new THREE.Vector3(1.5, 4.5, 0), blockVLeft, 'split'); // Chiều rộng (Đưa lên góc trên bên phải để không bị mờ)
+        // Khối ngang (Phải)
+        createLabel(5, new THREE.Vector3(0, -1.5, 2.5), blockVRight, 'split'); // Chiều dài
+        createLabel(2, new THREE.Vector3(3, 0, 2.5), blockVRight, 'split');    // Chiều cao
+        createLabel(5, new THREE.Vector3(3, 1.5, 0), blockVRight, 'split');    // Chiều rộng (Đưa lên góc trên để tránh bị nhãn 2cm che)
+
+        // Nhãn khi Tách Ngang (Gắn vào từng khối con)
+        // Khối trên
+        createLabel(3, new THREE.Vector3(0, 3.5, 2.5), blockHTop, 'split');  // Chiều dài
+        createLabel(6, new THREE.Vector3(-2, 0, 2.5), blockHTop, 'split');   // Chiều cao
+        createLabel(5, new THREE.Vector3(2, 3.5, 0), blockHTop, 'split');    // Chiều rộng (Đưa lên vị trí cao góc phải)
+        // Khối dưới
+        createLabel(8, new THREE.Vector3(0, -1.5, 2.5), blockHBottom, 'split'); // Chiều dài
+        createLabel(2, new THREE.Vector3(4.5, 0, 2.5), blockHBottom, 'split');  // Chiều cao
+        createLabel(5, new THREE.Vector3(4.5, 1.5, 0), blockHBottom, 'split');  // Chiều rộng (Đẩy lên cao để thoát khỏi sự che khuất của 2cm)
+
+        // Mặc định ẩn nhãn chia
+        allLabels.forEach(l => {
+            if(l.type === 'split') l.div.style.opacity = '0';
+        });
+
+        // --- 4. LOGIC TÁCH KHỐI VÀ ÂM THANH ---
+        // Tạo âm thanh "Click" đơn giản bằng Web Audio API (không cần tải file)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSnapSound() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        let currentMode = 'vertical'; // 'vertical' hoặc 'horizontal'
+        let sliderValue = 0; // 0 đến 1
+        let wasSplit = false;
+
+        function updateSimulation() {
+            // Tách Dọc
+            if (currentMode === 'vertical') {
+                // Max offset là 3 unit mỗi bên
+                blockVLeft.position.x = -2.5 - (sliderValue * 3);
+                blockVRight.position.x = 1.5 + (sliderValue * 3);
+                
+                // Hiện mờ mặt phẳng cắt
+                cutPlaneV.material.opacity = sliderValue > 0 && sliderValue < 0.3 ? sliderValue * 2 : 0;
+            } 
+            // Tách Ngang
+            else {
+                // Phần trên bay lên, phần dưới giữ nguyên
+                blockHTop.position.y = 5 + (sliderValue * 4);
+                
+                cutPlaneH.material.opacity = sliderValue > 0 && sliderValue < 0.4 ? sliderValue * 2.5 : 0;
+            }
+
+            // Logic hiển thị nhãn (Fade)
+            let origOpacity = 1;
+            let splitOpacity = 0;
+
+            if (sliderValue > 0) {
+                // Fade trong khoảng 0% - 10%
+                origOpacity = Math.max(0, 1 - (sliderValue / 0.1));
+                splitOpacity = Math.min(1, sliderValue / 0.1);
+            }
+
+            // Kiểm tra trạng thái vấp (snap) để phát âm thanh
+            if (sliderValue === 0 && wasSplit) {
+                playSnapSound();
+                wasSplit = false;
+            } else if (sliderValue > 0) {
+                wasSplit = true;
+            }
+
+            // Cập nhật Opacity (Có tính năng làm mờ nếu bị che khuất sẽ được tính toán ở hàm render)
+            allLabels.forEach(l => {
+                // Cập nhật theo loại
+                if (l.type === 'original') {
+                    l.targetOpacity = origOpacity;
+                } else if (l.type === 'split') {
+                    // Chỉ hiện nhãn split của Group đang active
+                    const isParentVisible = (currentMode === 'vertical' && (l.object.parent === blockVLeft || l.object.parent === blockVRight)) ||
+                                            (currentMode === 'horizontal' && (l.object.parent === blockHTop || l.object.parent === blockHBottom));
+                    
+                    l.targetOpacity = isParentVisible ? splitOpacity : 0;
+                }
+            });
+        }
+
+        // --- 5. TƯƠNG TÁC GIAO DIỆN (UI) ---
+        const slider = document.getElementById('split-slider');
+        const btnVert = document.getElementById('btn-split-vertical');
+        const btnHoriz = document.getElementById('btn-split-horizontal');
+        const btnUnit = document.getElementById('btn-unit');
+        const btnReset = document.getElementById('btn-reset');
+
+        slider.addEventListener('input', (e) => {
+            sliderValue = e.target.value / 100;
+            updateSimulation();
+        });
+
+        function switchMode(mode) {
+            currentMode = mode;
+            // Reset slider
+            slider.value = 0;
+            sliderValue = 0;
+            wasSplit = false;
+            
+            // Đặt lại vị trí các khối
+            blockVLeft.position.x = -2.5;
+            blockVRight.position.x = 1.5;
+            blockHTop.position.y = 5;
+
+            // Chuyển đổi hiển thị Group
+            if (mode === 'vertical') {
+                groupVertical.visible = true;
+                groupHorizontal.visible = false;
+                btnVert.classList.add('active');
+                btnHoriz.classList.remove('active');
+            } else {
+                groupVertical.visible = false;
+                groupHorizontal.visible = true;
+                btnVert.classList.remove('active');
+                btnHoriz.classList.add('active');
+            }
+            updateSimulation();
+        }
+
+        btnVert.addEventListener('click', () => switchMode('vertical'));
+        btnHoriz.addEventListener('click', () => switchMode('horizontal'));
+
+        btnReset.addEventListener('click', () => {
+            switchMode(currentMode); // Reset lại chế độ hiện tại
+            controls.reset();        // Đưa camera về ban đầu
+            camera.position.set(12, 12, 15);
+        });
+
+        btnUnit.addEventListener('click', () => {
+            isLabelsVisible = !isLabelsVisible;
+        });
+
+        // --- 6. VÒNG LẶP RENDER & TÍNH TOÁN CHE KHUẤT NHÃN ---
+        const raycaster = new THREE.Raycaster();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Tính toán che khuất (Occlusion) cho nhãn
+            // Nếu nhãn bị khối 3D che mất, giảm opacity xuống 40%
+            allLabels.forEach(l => {
+                if (l.targetOpacity > 0) {
+                    // Lấy vị trí thế giới của nhãn
+                    const vector = new THREE.Vector3();
+                    l.object.getWorldPosition(vector);
+                    
+                    // Raycast từ camera tới nhãn
+                    const dir = vector.clone().sub(camera.position).normalize();
+                    raycaster.set(camera.position, dir);
+                    
+                    // Kiểm tra chạm vào các khối đang hiển thị
+                    const activeGroup = currentMode === 'vertical' ? groupVertical : groupHorizontal;
+                    // Lọc ra các mesh (bỏ line/edges)
+                    const meshes = activeGroup.children.filter(c => c.type === 'Mesh');
+                    
+                    const intersects = raycaster.intersectObjects(meshes, false);
+                    
+                    let isOccluded = false;
+                    if (intersects.length > 0) {
+                        // Tính khoảng cách tới nhãn
+                        const distToLabel = camera.position.distanceTo(vector);
+                        // Nếu mặt vật thể nằm gần camera hơn nhãn -> bị che
+                        if (intersects[0].distance < distToLabel - 0.5) { // trừ hao 0.5 để tránh lỗi làm tròn sát mặt
+                            isOccluded = true;
+                        }
+                    }
+
+                    // Áp dụng opacity cuối cùng (kết hợp cờ Ẩn/Hiện)
+                    const visibilityFactor = isLabelsVisible ? 1 : 0;
+                    const finalOpacity = l.targetOpacity * (isOccluded ? 0.3 : 1.0) * visibilityFactor;
+                    l.div.style.opacity = finalOpacity;
+                    
+                    // Nếu mờ quá thì tắt pointer events
+                    l.div.style.pointerEvents = finalOpacity > 0.1 ? 'auto' : 'none';
+                } else {
+                    l.div.style.opacity = 0;
+                }
+            });
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Xử lý khi đổi kích thước cửa sổ
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Khởi chạy
+        updateSimulation();
+        animate();
+
+    </script>
+</body>
+</html>
