@@ -1,116 +1,286 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cổng Ứng Dụng Mô Phỏng 3D</title>
-    <!-- Tích hợp Tailwind CSS -->
+    <title>Hệ Thống Mô Phỏng Không Gian</title>
+    <!-- Tailwind CSS cho giao diện -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Tích hợp Icon Lucide -->
+    <!-- Lucide Icons cho biểu tượng -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Font chữ Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
+    <!-- Cấu hình Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
         }
-        .bg-pattern {
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        /* Hiệu ứng mượt mà cho toast thông báo */
+        .toast-enter {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+
+        .toast-enter-active {
+            transform: translateY(0);
+            opacity: 1;
+            transition: all 0.3s ease-out;
+        }
+
+        .toast-leave {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-leave-active {
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.3s ease-in;
+        }
+
+        /* Hiệu ứng chuyển động cho nền */
+        @keyframes blob {
+            0% {
+                transform: translate(0px, 0px) scale(1);
+            }
+
+            33% {
+                transform: translate(30px, -50px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+
+            100% {
+                transform: translate(0px, 0px) scale(1);
+            }
+        }
+
+        .animate-blob {
+            animation: blob 10s infinite alternate;
+        }
+
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(10deg);
+            }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-float-slow {
+            animation: float 9s ease-in-out infinite reverse;
+        }
+
+        .animate-float-slower {
+            animation: float 12s ease-in-out infinite;
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex flex-col">
 
-    <!-- Phần Header / Hero Section -->
-    <header class="bg-gradient-to-br from-blue-700 to-indigo-900 text-white pt-16 pb-28 px-6 relative overflow-hidden bg-pattern">
-        <div class="max-w-5xl mx-auto text-center relative z-10">
-            <div class="inline-flex items-center justify-center p-3 bg-white/10 rounded-2xl backdrop-blur-sm mb-6 border border-white/20">
-                <i data-lucide="cuboid" class="w-8 h-8 text-blue-200"></i>
-            </div>
-            <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Hệ Thống Mô Phỏng Không Gian</h1>
-            <p class="text-blue-100 text-lg md:text-xl max-w-2xl mx-auto">
-                Khám phá hình học và không gian 3D thông qua các ứng dụng mô phỏng trực quan, sinh động.
-            </p>
+<body
+    class="min-h-screen font-sans text-slate-800 relative overflow-x-hidden selection:bg-indigo-200 selection:text-indigo-900">
+
+    <!-- Lớp nền Không gian 3D & Màu sắc -->
+    <div class="fixed inset-0 z-[-1] bg-slate-50 overflow-hidden">
+        <!-- Lưới tọa độ không gian -->
+        <div
+            class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEuNSIgZmlsbD0iIzY0NzRiNSIgZmlsbC1vcGFjaXR5PSIwLjE1Ii8+PC9zdmc+')] [mask-image:linear-gradient(to_bottom,white,transparent_80%)]">
         </div>
-        
-        <!-- Hiệu ứng trang trí -->
-        <div class="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
-            <svg class="relative block w-full h-[50px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C49.71,109.4,110.47,117.9,171.4,115.1,223.3,112.7,273.6,97.5,321.39,56.44Z" fill="#f8fafc"></path>
-            </svg>
+
+        <!-- Các luồng ánh sáng màu sắc (Blobs) -->
+        <div
+            class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-400/30 rounded-full filter blur-[80px] animate-blob">
         </div>
+        <div
+            class="absolute top-[20%] right-[-10%] w-[45%] h-[45%] bg-cyan-400/30 rounded-full filter blur-[80px] animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute bottom-[-20%] left-[20%] w-[60%] h-[60%] bg-fuchsia-400/30 rounded-full filter blur-[80px] animate-blob animation-delay-4000">
+        </div>
+
+        <!-- Các khối hình học lơ lửng -->
+        <i data-lucide="box" class="absolute top-[15%] left-[5%] w-32 h-32 text-indigo-500/10 animate-float-slow"></i>
+        <i data-lucide="hexagon"
+            class="absolute top-[60%] right-[8%] w-48 h-48 text-fuchsia-500/10 animate-float-slower"></i>
+        <i data-lucide="triangle" class="absolute bottom-[10%] left-[15%] w-28 h-28 text-cyan-500/10 animate-float"></i>
+        <i data-lucide="circle-dashed"
+            class="absolute top-[25%] right-[25%] w-24 h-24 text-purple-500/10 animate-float-slow"></i>
+        <i data-lucide="square"
+            class="absolute bottom-[40%] left-[50%] w-20 h-20 text-pink-500/10 animate-float-slower"></i>
+    </div>
+
+    <!-- Header -->
+    <header class="pt-16 pb-10 text-center px-4">
+        <div class="inline-flex items-center justify-center p-3 bg-indigo-600 rounded-full mb-4 text-white shadow-lg">
+            <i data-lucide="shapes" class="w-8 h-8"></i>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Hệ Thống Mô Phỏng Không Gian</h1>
+        <p class="text-slate-600 max-w-lg mx-auto">Khám phá hình học và không gian 3D thông qua các ứng dụng mô phỏng
+            trực quan, sinh động.</p>
     </header>
 
-    <!-- Phần Nội dung (Danh sách 4 ứng dụng) -->
-    <main class="flex-grow max-w-5xl mx-auto px-6 -mt-16 relative z-20 w-full pb-16">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-
-            <!-- Ứng dụng 1: Xếp khối gỗ -->
-            <a href="https://hoangusa08.github.io/toan-lop-5/mo-phong-3d-xep-khoi-go.html" target="_blank" class="group bg-white rounded-2xl shadow-sm border border-slate-200 p-8 hover:shadow-xl hover:-translate-y-2 hover:border-blue-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
-                <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                    <i data-lucide="blocks" class="w-10 h-10"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-blue-700 transition-colors">Xếp Khối Gỗ 3D</h2>
-                <p class="text-slate-600 mb-6 flex-grow">Thực hành xếp và đếm các khối lập phương trong không gian 3D, giúp phát triển tư duy hình học và khả năng tưởng tượng.</p>
-                <div class="inline-flex items-center font-semibold text-blue-600 group-hover:text-blue-800">
-                    Trải nghiệm ngay <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </a>
-
-            <!-- Ứng dụng 2: Thể tích hòn đá -->
-            <a href="https://hoangusa08.github.io/toan-lop-5/mo-phong-the-tich-tang-da.html" target="_blank" class="group bg-white rounded-2xl shadow-sm border border-slate-200 p-8 hover:shadow-xl hover:-translate-y-2 hover:border-cyan-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-cyan-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
-                <div class="w-20 h-20 bg-cyan-100 text-cyan-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:bg-cyan-600 group-hover:text-white transition-colors duration-300">
-                    <i data-lucide="droplets" class="w-10 h-10"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-cyan-700 transition-colors">Thể Tích Hòn Đá</h2>
-                <p class="text-slate-600 mb-6 flex-grow">Quan sát mực nước dâng lên trong bể khi thả hòn đá vào để hiểu rõ nguyên lý đo thể tích của một vật thể có hình dạng không đều.</p>
-                <div class="inline-flex items-center font-semibold text-cyan-600 group-hover:text-cyan-800">
-                    Trải nghiệm ngay <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </a>
-
-            <!-- Ứng dụng 3: Tách khối chữ L -->
-            <a href="https://hoangusa08.github.io/toan-lop-5/mo-ta-tach-khoi-chu-l.html" target="_blank" class="group bg-white rounded-2xl shadow-sm border border-slate-200 p-8 hover:shadow-xl hover:-translate-y-2 hover:border-indigo-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
-                <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
-                    <i data-lucide="shapes" class="w-10 h-10"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-indigo-700 transition-colors">Tách Khối Chữ L</h2>
-                <p class="text-slate-600 mb-6 flex-grow">Tương tác trực tiếp để cắt và tách một khối hình chữ L phức tạp thành các khối hộp chữ nhật đơn giản, giúp dễ dàng tính toán diện tích, thể tích.</p>
-                <div class="inline-flex items-center font-semibold text-indigo-600 group-hover:text-indigo-800">
-                    Trải nghiệm ngay <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </a>
-
-            <!-- Ứng dụng 4: Thể tích hình hộp -->
-            <a href="https://hoangusa08.github.io/toan-lop-5/ung-dung-kham-pha-the-tich-hinh-hop.html" target="_blank" class="group bg-white rounded-2xl shadow-sm border border-slate-200 p-8 hover:shadow-xl hover:-translate-y-2 hover:border-purple-300 transition-all duration-300 flex flex-col items-center text-center relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10 transition-transform group-hover:scale-110"></div>
-                <div class="w-20 h-20 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-inner group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                    <i data-lucide="box" class="w-10 h-10"></i>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-purple-700 transition-colors">Khám Phá Hình Hộp</h2>
-                <p class="text-slate-600 mb-6 flex-grow">Tự do thay đổi các kích thước chiều dài, chiều rộng, chiều cao của hình hộp chữ nhật để rút ra công thức tính thể tích một cách sinh động.</p>
-                <div class="inline-flex items-center font-semibold text-purple-600 group-hover:text-purple-800">
-                    Trải nghiệm ngay <i data-lucide="arrow-right" class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform"></i>
-                </div>
-            </a>
-
+    <!-- Main Content: Grid of Links -->
+    <main class="max-w-6xl mx-auto px-4 pb-20">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="links-container">
+            <!-- Danh sách các link sẽ được tạo bằng JavaScript -->
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-8 mt-auto">
-        <div class="max-w-5xl mx-auto px-6 text-center text-slate-500">
-            <p>&copy; 2026 Hệ Thống Mô Phỏng Không Gian. Thiết kế dành cho giáo dục.</p>
-        </div>
-    </footer>
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
 
-    <!-- Khởi tạo Icon -->
     <script>
-        lucide.createIcons();
+        // Dữ liệu các liên kết
+        const linksData = [
+            {
+                title: "Khám phá thể tích hình hộp",
+                description: "Thực hành tính toán và khám phá công thức tính thể tích của hình hộp chữ nhật.",
+                icon: "box",
+                color: "text-blue-500",
+                bgColor: "bg-blue-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/ung-dung-kham-pha-the-tich-hinh-hop.html"
+            },
+            {
+                title: "Xếp khối gỗ 3D",
+                description: "Thử thách tư duy không gian với trò chơi xếp các khối gỗ đa chiều.",
+                icon: "blocks",
+                color: "text-orange-500",
+                bgColor: "bg-orange-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/mo-phong-3d-xep-khoi-go.html"
+            },
+            {
+                title: "Thể tích hòn đá",
+                description: "Thực hành đo thể tích vật thể không gian bằng phương pháp tràn nước.",
+                icon: "beaker",
+                color: "text-teal-500",
+                bgColor: "bg-teal-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/mo-phong-the-tich-tang-da.html"
+            },
+            {
+                title: "Tách khối chữ L",
+                description: "Học cách phân giải một khối hình học phức tạp thành các khối đơn giản.",
+                icon: "layout-template",
+                color: "text-purple-500",
+                bgColor: "bg-purple-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/mo-ta-tach-khoi-chu-l.html"
+            },
+            {
+                title: "Lật bể nước",
+                description: "Quan sát sự thay đổi chiều cao mực nước khi thay đổi mặt đáy của bể.",
+                icon: "waves",
+                color: "text-cyan-500",
+                bgColor: "bg-cyan-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/lat_be_nuoc.html"
+            },
+            {
+                title: "Gấp hình lập phương",
+                description: "Hình dung quá trình chuyển đổi từ mặt phẳng cắt 2D thành khối 3D.",
+                icon: "package-open",
+                color: "text-pink-500",
+                bgColor: "bg-pink-100",
+                url: "https://hoangusa08.github.io/toan-lop-5/thu_thach_gap_hinh_lap_phuong.html"
+            }
+        ];
+
+        // Khởi tạo giao diện
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('links-container');
+
+            linksData.forEach((link, index) => {
+                // Tạo element thẻ (card)
+                const card = document.createElement('a');
+                card.href = link.url;
+                card.target = "_blank"; // Mở link trong tab mới
+                card.className = "group block bg-white/70 backdrop-blur-md rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 border border-white/80 cursor-pointer relative overflow-hidden";
+
+                card.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <div class="flex-shrink-0 p-3 rounded-xl ${link.bgColor} ${link.color} group-hover:scale-110 transition-transform duration-300">
+                            <i data-lucide="${link.icon}" class="w-6 h-6"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-semibold text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">${link.title}</h3>
+                            <p class="text-sm text-slate-500 leading-relaxed">${link.description}</p>
+                        </div>
+                        <div class="flex-shrink-0 text-slate-300 group-hover:text-indigo-500 transition-colors mt-1">
+                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                `;
+
+                // Xử lý sự kiện click
+                // card.addEventListener('click', (e) => {
+                //     e.preventDefault();
+                //     showToast(`Đang chuyển đến: ${link.title}`);
+                //     setTimeout(() => {
+                //         window.location.href = link.url;
+                //     }, 1500);
+                // });
+                container.appendChild(card);
+            });
+
+            // Khởi tạo icon của Lucide
+            lucide.createIcons();
+        });
+
+        // Hàm hiển thị thông báo (Toast)
+        function showToast(message) {
+            const toastContainer = document.getElementById('toast-container');
+
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-800 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 toast-enter';
+            toast.innerHTML = `
+                <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                <span class="text-sm">${message}</span>
+            `;
+
+            toastContainer.appendChild(toast);
+            lucide.createIcons({ root: toast });
+
+            // Trigger animation vào
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+
+            // Tự động tắt sau 3 giây
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-leave-active');
+
+                toast.addEventListener('transitionend', () => {
+                    toast.remove();
+                });
+            }, 3000);
+        }
     </script>
 </body>
+
 </html>

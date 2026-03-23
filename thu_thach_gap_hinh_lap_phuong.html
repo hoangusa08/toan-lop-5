@@ -1,297 +1,383 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, RotateCcw, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, CheckCircle, Info, Hand } from 'lucide-react';
-
-// --- CÁC BIỂU TƯỢNG (ICONS) THEO MÀU #F7941D ---
-const SquareIcon = () => <div className="w-[60%] h-[60%] bg-[#F7941D]" />;
-const CircleIcon = () => <div className="w-[25%] h-[25%] rounded-full bg-[#F7941D]" />;
-const XIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-[70%] h-[70%] text-[#F7941D] stroke-current stroke-[2.5]" strokeLinecap="round">
-    <line x1="4" y1="4" x2="20" y2="20"/>
-    <line x1="20" y1="4" x2="4" y2="20"/>
-  </svg>
-);
-const StarIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-[65%] h-[65%] text-[#F7941D] stroke-current stroke-[2] fill-transparent" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
-);
-
-// --- DỮ LIỆU CÁC MẶT ---
-const FACES = {
-  center: { id: 'center', name: 'Mặt trống (Giữa)', content: null, opp: 'back' },
-  top: { id: 'top', name: 'Mặt Hình Vuông', content: <SquareIcon />, opp: 'bottom' },
-  bottom: { id: 'bottom', name: 'Mặt Ngôi Sao', content: <StarIcon />, opp: 'top' },
-  left: { id: 'left', name: 'Mặt Chấm Tròn', content: <CircleIcon />, opp: 'right' },
-  right: { id: 'right', name: 'Mặt Dấu X', content: <XIcon />, opp: 'left' },
-  back: { id: 'back', name: 'Mặt trống (Ngoài cùng phải)', content: null, opp: 'center' }
-};
-
-export default function App() {
-  // --- TRẠNG THÁI (STATE) ---
-  const [foldProgress, setFoldProgress] = useState(0); // 0 (2D) to 1 (3D)
-  const [rotation, setRotation] = useState({ x: 55, y: -45 }); // Góc nhìn từ trên xuống để thấy rõ sàn nhà
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  
-  const [feedback, setFeedback] = useState({
-    type: 'info', // 'info', 'success', 'warning'
-    text: 'Em hãy kéo thanh trượt để gập hình, sau đó xoay không gian và bấm vào các mặt để khám phá nhé!'
-  });
-  
-  const [selectedFace, setSelectedFace] = useState(null);
-  const sceneRef = useRef(null);
-
-  // --- HÀM XỬ LÝ KÉO THẢ XOAY 3D ---
-  const handlePointerDown = (e) => {
-    setIsDragging(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handlePointerMove = (e) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - lastMousePos.x;
-    const deltaY = e.clientY - lastMousePos.y;
-    
-    setRotation(prev => ({
-      x: prev.x - deltaY * 0.5,
-      y: prev.y + deltaX * 0.5
-    }));
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handlePointerUp = () => setIsDragging(false);
-
-  useEffect(() => {
-    window.addEventListener('pointerup', handlePointerUp);
-    window.addEventListener('pointermove', handlePointerMove);
-    return () => {
-      window.removeEventListener('pointerup', handlePointerUp);
-      window.removeEventListener('pointermove', handlePointerMove);
-    };
-  }, [isDragging, lastMousePos]);
-
-  // --- HÀM XỬ LÝ SOI MẶT ---
-  const handleFaceClick = (faceId, e) => {
-    e.stopPropagation(); // Ngăn sự kiện kéo thả
-    if (foldProgress < 0.5) {
-      setFeedback({ type: 'info', text: 'Em hãy gập hình thành khối lập phương trước khi soi các mặt nhé!'});
-      return;
-    }
-    
-    setSelectedFace(faceId);
-    const oppId = FACES[faceId].opp;
-    setFeedback({
-      type: 'info',
-      text: `Em đang xem: ${FACES[faceId].name}. Mặt đối diện của nó là: ${FACES[oppId].name}.`
-    });
-  };
-
-  // --- RENDER MẶT LẬP PHƯƠNG ---
-  const FaceComponent = ({ faceId, transform, transformOrigin, children }) => {
-    const isSelected = selectedFace === faceId;
-    const isOpposite = selectedFace && FACES[selectedFace].opp === faceId;
-    
-    return (
-      <div 
-        className="absolute top-0 left-0 w-full h-full"
-        style={{
-          transformOrigin: transformOrigin,
-          transform: transform,
-          transformStyle: 'preserve-3d',
-        }}
-      >
-        <div
-          className={`absolute inset-0 flex items-center justify-center transition-all duration-300
-            ${isSelected ? 'border-green-400 shadow-[inset_0_0_20px_rgba(74,222,128,0.5)] z-20' : 
-              isOpposite ? 'border-orange-400 shadow-[inset_0_0_15px_rgba(251,146,60,0.3)] z-10' : 
-              'border-[#000]'}
-            border-[2px] bg-white hover:bg-gray-200 cursor-pointer
-          `}
-          onPointerDown={(e) => handleFaceClick(faceId, e)}
-        >
-          {FACES[faceId].content}
-          {/* Nền trong suốt để dễ bắt click */}
-          <div className="absolute inset-0 z-10" />
-        </div>
-        {children}
-      </div>
-    );
-  };
-
-  // Tính toán góc gập
-  const angle = foldProgress * 90;
-
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] font-sans text-gray-200 flex flex-col selection:bg-green-500/30">
-      
-      {/* HEADER */}
-      <header className="bg-[#111] shadow-md p-4 flex items-center justify-between z-10 border-b border-[#222]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.3)]">
-            <CheckCircle className="text-[#0a0a0a] w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Khám Phá Khối Lập Phương</h1>
-        </div>
-        <div className="bg-green-500/10 text-green-400 px-4 py-2 rounded-full font-semibold flex items-center gap-2 border border-green-500/20">
-          <Info className="w-5 h-5" />
-          Toán Lớp 5 - Hình Học Không Gian
-        </div>
-      </header>
-
-      {/* MAIN CONTENT */}
-      <main className="flex-1 p-4 md:p-6 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khám Phá Khối Lập Phương</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CSS tuỳ chỉnh cho các mặt của khối lập phương */
+        .cube-face {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+        }
+        .cube-face-inner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            border: 2px solid #000;
+            background-color: white;
+            cursor: pointer;
+        }
+        .cube-face-inner:hover {
+            background-color: #e5e7eb;
+        }
         
-        {/* CỘT TRÁI: Câu hỏi & Hướng dẫn */}
-        <div className="lg:w-1/3 flex flex-col gap-4">
-          <div className="bg-[#111] p-5 rounded-2xl shadow-sm border border-[#222]">
-            <h2 className="text-lg font-bold mb-3 text-white">Đề bài:</h2>
-            <p className="text-gray-400 font-medium leading-relaxed">
-              Em hãy quan sát hình khai triển bên dưới, sau đó gập lại thành khối lập phương và kiểm tra xem Mai có thể gấp được hình lập phương nào nhé!
-            </p>
-          </div>
+        /* Trạng thái được chọn */
+        .face-selected .cube-face-inner {
+            border-color: #4ade80 !important;
+            box-shadow: inset 0 0 20px rgba(74,222,128,0.5) !important;
+            z-index: 20;
+        }
+        
+        /* Trạng thái đối diện */
+        .face-opposite .cube-face-inner {
+            border-color: #fb923c !important;
+            box-shadow: inset 0 0 15px rgba(251,146,60,0.3) !important;
+            z-index: 10;
+        }
 
-          <div className={`p-5 rounded-2xl border transition-all duration-300 ${
-              feedback.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-300' : 
-              feedback.type === 'warning' ? 'bg-orange-500/10 border-orange-500/30 text-orange-300' : 
-              'bg-blue-500/10 border-blue-500/30 text-blue-300'
-            }`}>
-            <div className="flex items-start gap-3">
-              <div className="mt-1">
-                {feedback.type === 'success' ? <CheckCircle className="w-6 h-6 text-green-400"/> :
-                 feedback.type === 'warning' ? <Info className="w-6 h-6 text-orange-400"/> :
-                 <Hand className="w-6 h-6 text-blue-400"/>}
-              </div>
-              <p className="font-medium leading-relaxed">{feedback.text}</p>
+        .icon-orange { color: #F7941D; }
+        .bg-orange-custom { background-color: #F7941D; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#0a0a0a] font-sans text-gray-200 flex flex-col selection:bg-green-500/30 overflow-x-hidden">
+
+    <!-- HEADER -->
+    <header class="bg-[#111] shadow-md p-4 flex items-center justify-between z-10 border-b border-[#222]">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+                <svg class="text-[#0a0a0a] w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
             </div>
-          </div>
-          
-          {/* Nút hỗ trợ giáo viên */}
-          <div className="p-4 bg-[#111] rounded-xl border border-[#222] text-sm text-gray-400 text-center">
-            💡 <span className="font-semibold text-gray-300">Gợi ý cho học sinh:</span> <br/>Hãy bấm vào mặt Dấu X hoặc Hình Vuông trên khối lớn để xem mặt đối diện của nó là gì.
-          </div>
+            <h1 class="text-2xl font-bold text-white tracking-wide">Khám Phá Khối Lập Phương</h1>
+        </div>
+        <div class="bg-green-500/10 text-green-400 px-4 py-2 rounded-full font-semibold flex items-center gap-2 border border-green-500/20">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Toán Lớp 5 - Hình Học Không Gian
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 p-4 md:p-6 flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
+        
+        <!-- CỘT TRÁI -->
+        <div class="lg:w-1/3 flex flex-col gap-4">
+            <div class="bg-[#111] p-5 rounded-2xl shadow-sm border border-[#222]">
+                <h2 class="text-lg font-bold mb-3 text-white">Đề bài:</h2>
+                <p class="text-gray-400 font-medium leading-relaxed">
+                    Em hãy quan sát hình khai triển bên dưới, sau đó gập lại thành khối lập phương và kiểm tra xem Mai có thể gấp được hình lập phương nào nhé!
+                </p>
+            </div>
+
+            <!-- Feedback Box -->
+            <div id="feedback-box" class="p-5 rounded-2xl border transition-all duration-300 bg-blue-500/10 border-blue-500/30 text-blue-300">
+                <div class="flex items-start gap-3">
+                    <div id="feedback-icon" class="mt-1">
+                        <!-- Icon sẽ được cập nhật bằng JS -->
+                        <svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M6 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/></svg>
+                    </div>
+                    <p id="feedback-text" class="font-medium leading-relaxed">
+                        Em hãy kéo thanh trượt để gập hình, sau đó xoay không gian và bấm vào các mặt để khám phá nhé!
+                    </p>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-[#111] rounded-xl border border-[#222] text-sm text-gray-400 text-center">
+                💡 <span class="font-semibold text-gray-300">Gợi ý cho học sinh:</span> <br/>Hãy bấm vào mặt Dấu X hoặc Hình Vuông trên khối lớn để xem mặt đối diện của nó là gì.
+            </div>
         </div>
 
-        {/* CỘT GIỮA: Vùng tương tác 3D */}
-        <div className="lg:w-2/3 bg-black rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-[#222] overflow-hidden flex flex-col relative">
-          
-          <div className="absolute top-4 left-4 z-10 bg-[#111]/80 backdrop-blur px-3 py-1.5 rounded-full text-sm font-semibold text-green-400 border border-[#333] shadow-sm pointer-events-none">
-            Góc xoay: {Math.round(rotation.x)}°, {Math.round(rotation.y)}°
-          </div>
+        <!-- CỘT GIỮA: 3D Workspace -->
+        <div class="lg:w-2/3 bg-black rounded-3xl shadow-[0_0_30px_rgba(0,0,0,0.8)] border border-[#222] overflow-hidden flex flex-col relative">
+            
+            <div id="angle-display" class="absolute top-4 left-4 z-10 bg-[#111]/80 backdrop-blur px-3 py-1.5 rounded-full text-sm font-semibold text-green-400 border border-[#333] shadow-sm pointer-events-none">
+                Góc xoay: 55°, -45°
+            </div>
 
-          {/* Sân khấu 3D */}
-          <div 
-            className="flex-1 flex items-center justify-center cursor-move touch-none bg-black relative overflow-hidden"
-            onPointerDown={handlePointerDown}
-            ref={sceneRef}
-            style={{ perspective: '1200px' }}
-          >
-            <div 
-              className="relative transition-transform duration-100 ease-out"
-              style={{
-                width: '140px', height: '140px',
-                transformStyle: 'preserve-3d',
-                transform: `translateZ(${-foldProgress * 70}px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`
-              }}
-            >
-              
-              {/* SÀN NHÀ LƯỚI 3D (GRID) */}
-              {/* Lưới kích thước 2800px với cell 140px đảm bảo ôm khít tâm hình hộp khai triển */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  width: '2800px',
-                  height: '2800px',
-                  left: '50%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%) translateZ(-1px)', // Nằm ngay sát phía sau các mặt phẳng
-                  backgroundImage: 'linear-gradient(rgba(74, 222, 128, 0.35) 2px, transparent 2px), linear-gradient(90deg, rgba(74, 222, 128, 0.35) 2px, transparent 2px)',
-                  backgroundSize: '140px 140px', 
-                  backgroundPosition: '70px 70px', // Dịch một nửa để ô vuông 140x140 nằm gọn vào giữa tâm
-                  WebkitMaskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 45%)',
-                  maskImage: 'radial-gradient(circle at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 45%)'
-                }}
-              />
-
-              {/* KHỐI LẬP PHƯƠNG CHÍNH ĐƯỢC CẤU TRÚC ĐỂ GẬP */}
-              <FaceComponent faceId="center" transform="none" transformOrigin="center">
+            <!-- Sân khấu 3D -->
+            <div id="scene" class="flex-1 flex items-center justify-center cursor-move touch-none bg-black relative overflow-hidden" style="perspective: 1200px;">
                 
-                {/* Mặt trên (Gập lên -> quay góc âm) */}
-                <FaceComponent faceId="top" 
-                  transformOrigin="bottom center" 
-                  transform={`translateY(-100%) rotateX(${-angle}deg)`} />
-                
-                {/* Mặt trái (Gập lên -> quay góc dương) */}
-                <FaceComponent faceId="left" 
-                  transformOrigin="right center" 
-                  transform={`translateX(-100%) rotateY(${angle}deg)`} />
-                
-                {/* Mặt phải (Gập lên -> quay góc âm) */}
-                <FaceComponent faceId="right" 
-                  transformOrigin="left center" 
-                  transform={`translateX(100%) rotateY(${-angle}deg)`}>
+                <div id="cube-wrapper" class="relative transition-transform duration-100 ease-out" style="width: 140px; height: 140px; transform-style: preserve-3d; transform: translateZ(0px) rotateX(55deg) rotateY(-45deg);">
                     
-                    {/* Mặt ngoài cùng bên phải gập tiếp thành nắp hộp (quay góc âm) */}
-                    <FaceComponent faceId="back" 
-                      transformOrigin="left center" 
-                      transform={`translateX(100%) rotateY(${-angle}deg)`} />
-                      
-                </FaceComponent>
+                    <!-- SÀN NHÀ LƯỚI 3D (GRID) -->
+                    <div class="absolute pointer-events-none" style="width: 2800px; height: 2800px; left: 50%; top: 50%; transform: translate(-50%, -50%) translateZ(-1px); background-image: linear-gradient(rgba(74, 222, 128, 0.35) 2px, transparent 2px), linear-gradient(90deg, rgba(74, 222, 128, 0.35) 2px, transparent 2px); background-size: 140px 140px; background-position: 70px 70px; -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 45%); mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 45%);"></div>
 
-                {/* Mặt dưới (Gập lên -> quay góc dương) */}
-                <FaceComponent faceId="bottom" 
-                  transformOrigin="top center" 
-                  transform={`translateY(100%) rotateX(${angle}deg)`} />
+                    <!-- KHỐI LẬP PHƯƠNG CHÍNH -->
+                    <div id="face-center" class="cube-face" data-id="center" style="transform: none; transform-origin: center;">
+                        <div class="cube-face-inner"><div class="absolute inset-0 z-10"></div></div>
+                        
+                        <!-- Mặt trên -->
+                        <div id="face-top" class="cube-face" data-id="top" style="transform-origin: bottom center; transform: translateY(-100%) rotateX(0deg);">
+                            <div class="cube-face-inner">
+                                <div class="w-[60%] h-[60%] bg-orange-custom"></div>
+                                <div class="absolute inset-0 z-10"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mặt trái -->
+                        <div id="face-left" class="cube-face" data-id="left" style="transform-origin: right center; transform: translateX(-100%) rotateY(0deg);">
+                            <div class="cube-face-inner">
+                                <div class="w-[25%] h-[25%] rounded-full bg-orange-custom"></div>
+                                <div class="absolute inset-0 z-10"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mặt phải (chứa cả mặt ngoài cùng bên phải) -->
+                        <div id="face-right" class="cube-face" data-id="right" style="transform-origin: left center; transform: translateX(100%) rotateY(0deg);">
+                            <div class="cube-face-inner">
+                                <svg viewBox="0 0 24 24" class="w-[70%] h-[70%] icon-orange stroke-current stroke-[2.5]" stroke-linecap="round">
+                                    <line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/>
+                                </svg>
+                                <div class="absolute inset-0 z-10"></div>
+                            </div>
+                            
+                            <!-- Mặt ngoài cùng bên phải -->
+                            <div id="face-back" class="cube-face" data-id="back" style="transform-origin: left center; transform: translateX(100%) rotateY(0deg);">
+                                <div class="cube-face-inner"><div class="absolute inset-0 z-10"></div></div>
+                            </div>
+                        </div>
 
-              </FaceComponent>
+                        <!-- Mặt dưới -->
+                        <div id="face-bottom" class="cube-face" data-id="bottom" style="transform-origin: top center; transform: translateY(100%) rotateX(0deg);">
+                            <div class="cube-face-inner">
+                                <svg viewBox="0 0 24 24" class="w-[65%] h-[65%] icon-orange stroke-current stroke-[2] fill-transparent" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                                <div class="absolute inset-0 z-10"></div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
             </div>
-          </div>
 
-          {/* Bảng điều khiển */}
-          <div className="p-6 bg-[#111] border-t border-[#222]">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between gap-4">
-                <span className="font-bold text-gray-400 whitespace-nowrap">2D (Mở)</span>
-                <input 
-                  type="range" 
-                  min="0" max="1" step="0.01" 
-                  value={foldProgress} 
-                  onChange={(e) => {
-                    setFoldProgress(parseFloat(e.target.value));
-                    setSelectedFace(null);
-                  }}
-                  className="w-full h-3 bg-[#333] rounded-lg appearance-none cursor-pointer accent-green-500 focus:outline-none"
-                />
-                <span className="font-bold text-green-400 whitespace-nowrap">3D (Gập)</span>
-              </div>
-              
-              <div className="flex justify-center gap-3 flex-wrap">
-                <button onClick={() => setFoldProgress(0)} className="px-4 py-2 bg-[#222] hover:bg-[#333] rounded-xl font-medium text-gray-300 transition flex items-center gap-2 border border-[#444]">
-                  Mở phẳng
-                </button>
-                <button onClick={() => setFoldProgress(1)} className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition flex items-center gap-2 shadow-[0_0_15px_rgba(22,163,74,0.4)]">
-                  <Play className="w-4 h-4 fill-current"/> Gập khối
-                </button>
-                <button 
-                  onClick={() => {setRotation({x: 55, y: -45}); setFoldProgress(1); setSelectedFace(null);}} 
-                  className="p-2 bg-[#222] hover:bg-[#333] rounded-xl text-gray-300 transition border border-[#444]"
-                  title="Đặt lại góc nhìn"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                </button>
-              </div>
+            <!-- Bảng điều khiển -->
+            <div class="p-6 bg-[#111] border-t border-[#222]">
+                <div class="flex flex-col gap-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <span class="font-bold text-gray-400 whitespace-nowrap">2D (Mở)</span>
+                        <input 
+                            type="range" id="fold-slider" min="0" max="1" step="0.01" value="0" 
+                            class="w-full h-3 bg-[#333] rounded-lg appearance-none cursor-pointer accent-green-500 focus:outline-none"
+                        />
+                        <span class="font-bold text-green-400 whitespace-nowrap">3D (Gập)</span>
+                    </div>
+                    
+                    <div class="flex justify-center gap-3 flex-wrap">
+                        <button id="btn-unfold" class="px-4 py-2 bg-[#222] hover:bg-[#333] rounded-xl font-medium text-gray-300 transition flex items-center gap-2 border border-[#444]">
+                            Mở phẳng
+                        </button>
+                        <button id="btn-fold" class="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition flex items-center gap-2 shadow-[0_0_15px_rgba(22,163,74,0.4)]">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Gập khối
+                        </button>
+                        <button id="btn-reset-view" class="p-2 bg-[#222] hover:bg-[#333] rounded-xl text-gray-300 transition border border-[#444]" title="Đặt lại góc nhìn">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+                        </button>
+                    </div>
 
-              {/* Nút xoay */}
-              <div className="flex justify-center gap-2 mt-2">
-                <button onClick={() => setRotation(r => ({...r, x: r.x - 30}))} className="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400"><ChevronUp className="w-5 h-5"/></button>
-                <button onClick={() => setRotation(r => ({...r, x: r.x + 30}))} className="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400"><ChevronDown className="w-5 h-5"/></button>
-                <button onClick={() => setRotation(r => ({...r, y: r.y - 30}))} className="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400"><ChevronLeft className="w-5 h-5"/></button>
-                <button onClick={() => setRotation(r => ({...r, y: r.y + 30}))} className="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400"><ChevronRight className="w-5 h-5"/></button>
-              </div>
+                    <!-- Nút xoay -->
+                    <div class="flex justify-center gap-2 mt-2">
+                        <button id="btn-up" class="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                        <button id="btn-down" class="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <button id="btn-left" class="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <button id="btn-right" class="p-2 bg-[#1a1a1a] hover:bg-[#333] rounded-lg border border-[#333] text-gray-400">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
 
-      </main>
-    </div>
-  );
-}
+    </main>
+
+    <script>
+        // --- DỮ LIỆU CÁC MẶT ---
+        const FACES = {
+            center: { name: 'Mặt trống (Giữa)', opp: 'back' },
+            top: { name: 'Mặt Hình Vuông', opp: 'bottom' },
+            bottom: { name: 'Mặt Ngôi Sao', opp: 'top' },
+            left: { name: 'Mặt Chấm Tròn', opp: 'right' },
+            right: { name: 'Mặt Dấu X', opp: 'left' },
+            back: { name: 'Mặt trống (Ngoài cùng phải)', opp: 'center' }
+        };
+
+        const ICONS = {
+            info: `<svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`,
+            success: `<svg class="w-6 h-6 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+            hand: `<svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M6 11V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/></svg>`
+        };
+
+        // --- TRẠNG THÁI ---
+        let foldProgress = 0;
+        let rotation = { x: 55, y: -45 };
+        let isDragging = false;
+        let lastMousePos = { x: 0, y: 0 };
+        let selectedFace = null;
+
+        // --- DOM ELEMENTS ---
+        const slider = document.getElementById('fold-slider');
+        const cubeWrapper = document.getElementById('cube-wrapper');
+        const angleDisplay = document.getElementById('angle-display');
+        const scene = document.getElementById('scene');
+        
+        const faceTop = document.getElementById('face-top');
+        const faceBottom = document.getElementById('face-bottom');
+        const faceLeft = document.getElementById('face-left');
+        const faceRight = document.getElementById('face-right');
+        const faceBack = document.getElementById('face-back');
+
+        const feedbackBox = document.getElementById('feedback-box');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackText = document.getElementById('feedback-text');
+        
+        const allFaces = document.querySelectorAll('.cube-face');
+
+        // --- HÀM CẬP NHẬT GIAO DIỆN ---
+        function updateCubeTransform() {
+            const angle = foldProgress * 90;
+            
+            // Cập nhật vị trí toàn khối
+            cubeWrapper.style.transform = `translateZ(${-foldProgress * 70}px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`;
+            
+            // Cập nhật các bản lề (Gập lên -> tuân thủ dấu âm dương như React)
+            faceTop.style.transform = `translateY(-100%) rotateX(${-angle}deg)`;
+            faceLeft.style.transform = `translateX(-100%) rotateY(${angle}deg)`;
+            faceRight.style.transform = `translateX(100%) rotateY(${-angle}deg)`;
+            faceBack.style.transform = `translateX(100%) rotateY(${-angle}deg)`;
+            faceBottom.style.transform = `translateY(100%) rotateX(${angle}deg)`;
+
+            angleDisplay.textContent = `Góc xoay: ${Math.round(rotation.x)}°, ${Math.round(rotation.y)}°`;
+            slider.value = foldProgress;
+        }
+
+        function setFeedback(type, text) {
+            feedbackText.textContent = text;
+            feedbackBox.className = "p-5 rounded-2xl border transition-all duration-300";
+            
+            if (type === 'success') {
+                feedbackBox.classList.add('bg-green-500/10', 'border-green-500/30', 'text-green-300');
+                feedbackIcon.innerHTML = ICONS.success;
+            } else if (type === 'warning') {
+                feedbackBox.classList.add('bg-orange-500/10', 'border-orange-500/30', 'text-orange-300');
+                feedbackIcon.innerHTML = ICONS.info; // Can use orange info icon
+            } else {
+                feedbackBox.classList.add('bg-blue-500/10', 'border-blue-500/30', 'text-blue-300');
+                feedbackIcon.innerHTML = type === 'info' ? ICONS.info : ICONS.hand;
+            }
+        }
+
+        function clearFaceSelection() {
+            selectedFace = null;
+            allFaces.forEach(f => {
+                f.classList.remove('face-selected', 'face-opposite');
+            });
+        }
+
+        function selectFace(faceId) {
+            if (foldProgress < 0.5) {
+                setFeedback('info', 'Em hãy gập hình thành khối lập phương trước khi soi các mặt nhé!');
+                return;
+            }
+
+            clearFaceSelection();
+            selectedFace = faceId;
+            const oppId = FACES[faceId].opp;
+
+            document.getElementById(`face-${faceId}`).classList.add('face-selected');
+            document.getElementById(`face-${oppId}`).classList.add('face-opposite');
+
+            setFeedback('info', `Em đang xem: ${FACES[faceId].name}. Mặt đối diện của nó là: ${FACES[oppId].name}.`);
+        }
+
+        // --- EVENT LISTENERS ---
+        
+        // Slider gập khối
+        slider.addEventListener('input', (e) => {
+            foldProgress = parseFloat(e.target.value);
+            clearFaceSelection();
+            updateCubeTransform();
+        });
+
+        // Nút điều khiển
+        document.getElementById('btn-unfold').addEventListener('click', () => {
+            foldProgress = 0;
+            clearFaceSelection();
+            updateCubeTransform();
+        });
+
+        document.getElementById('btn-fold').addEventListener('click', () => {
+            foldProgress = 1;
+            clearFaceSelection();
+            updateCubeTransform();
+        });
+
+        document.getElementById('btn-reset-view').addEventListener('click', () => {
+            rotation = { x: 55, y: -45 };
+            foldProgress = 1;
+            clearFaceSelection();
+            updateCubeTransform();
+        });
+
+        document.getElementById('btn-up').addEventListener('click', () => { rotation.x -= 30; updateCubeTransform(); });
+        document.getElementById('btn-down').addEventListener('click', () => { rotation.x += 30; updateCubeTransform(); });
+        document.getElementById('btn-left').addEventListener('click', () => { rotation.y -= 30; updateCubeTransform(); });
+        document.getElementById('btn-right').addEventListener('click', () => { rotation.y += 30; updateCubeTransform(); });
+
+        // Xoay bằng chuột (Kéo thả)
+        scene.addEventListener('pointerdown', (e) => {
+            isDragging = true;
+            lastMousePos = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            const deltaX = e.clientX - lastMousePos.x;
+            const deltaY = e.clientY - lastMousePos.y;
+            
+            rotation.x -= deltaY * 0.5;
+            rotation.y += deltaX * 0.5;
+            
+            lastMousePos = { x: e.clientX, y: e.clientY };
+            updateCubeTransform();
+        });
+
+        window.addEventListener('pointerup', () => {
+            isDragging = false;
+        });
+
+        // Click chọn mặt
+        allFaces.forEach(face => {
+            face.querySelector('.cube-face-inner').addEventListener('pointerdown', (e) => {
+                e.stopPropagation(); // Ngăn sự kiện kéo thả scene
+                const faceId = face.getAttribute('data-id');
+                selectFace(faceId);
+            });
+        });
+
+        // --- KHỞI TẠO BAN ĐẦU ---
+        updateCubeTransform();
+
+    </script>
+</body>
+</html>
