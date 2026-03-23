@@ -217,7 +217,7 @@
                 // Tạo element thẻ (card)
                 const card = document.createElement('a');
                 card.href = link.url;
-                card
+                card.target = "_blank"; // Mở link trong tab mới
                 card.className = "group block bg-white/70 backdrop-blur-md rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 border border-white/80 cursor-pointer relative overflow-hidden";
 
                 card.innerHTML = `
