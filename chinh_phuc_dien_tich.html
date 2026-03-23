@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hành Trình Chinh Phục Diện Tích</title>
+  <!-- Nhúng Tailwind CSS để tạo giao diện -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Tuỳ chỉnh font chữ và một số animation cơ bản */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .modal-enter {
+      animation: modalScale 0.3s ease-out forwards;
+    }
+    @keyframes modalScale {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1.1); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+  <!-- Container chứa giao diện trò chơi -->
+  <div id="app" class="w-full max-w-4xl"></div>
+
+  <script>
+    // --- DATA CỦA TRÒ CHƠI ---
+    const GAME_DATA = [
+      {
+        id: 1,
+        title: "Vùng Đất Tam Giác",
+        theme: "bg-green-100 text-green-900 border-green-500",
+        headerColor: "bg-green-500",
+        questions: [
+          {
+            id: "c1_1", type: "mcq",
+            text: "Một hình tam giác có đáy 10,5cm, chiều cao 6cm.\nDiện tích tam giác là:",
+            options: ["63 cm²", "31,5 cm²", "16,5 cm²", "52,5 cm²"],
+            answer: "31,5 cm²"
+          },
+          {
+            id: "c1_2", type: "input",
+            text: "Một hình tam giác có đáy 8,4m và chiều cao 5m.\nDiện tích tam giác là: ______ m²",
+            answer: "21"
+          },
+          {
+            id: "c1_3", type: "tf",
+            text: "Một hình tam giác có đáy 7,2cm và chiều cao 4cm.\nDiện tích tam giác đó là 28,8cm².",
+            answer: "Sai"
+          },
+          {
+            id: "c1_4", type: "input",
+            text: "Một biển báo hình tam giác có đáy 1,2m và chiều cao 0,8m.\nDiện tích biển báo là bao nhiêu m²?",
+            answer: "0,48"
+          },
+          {
+            id: "c1_5", type: "input",
+            text: "Một mảnh giấy hình tam giác có đáy 9,6cm và chiều cao 0,5 dm.\nDiện tích mảnh giấy là bao nhiêu cm²?",
+            answer: "24"
+          }
+        ]
+      },
+      {
+        id: 2,
+        title: "Vùng Đất Hình Thang",
+        theme: "bg-orange-100 text-orange-900 border-orange-500",
+        headerColor: "bg-orange-500",
+        questions: [
+          {
+            id: "c2_1", type: "mcq",
+            text: "Một hình thang có: Đáy lớn 12,5m; Đáy bé 8,5m; Chiều cao 4m.\nDiện tích hình thang là:",
+            options: ["42 m²", "84 m²", "21 m²", "50 m²"],
+            answer: "42 m²"
+          },
+          {
+            id: "c2_2", type: "input",
+            text: "Thửa ruộng dạng hình thang với đáy lớn 10,2cm; đáy bé 6,8cm; cao 5cm.\nDiện tích thửa ruộng đó là: ______ cm²",
+            answer: "42,5"
+          },
+          {
+            id: "c2_3", type: "dragdrop",
+            text: "Kéo đáp án diện tích phù hợp vào từng hình thang:",
+            items: [
+              { id: "A", label: "Hình A (a=10,5m; b=7,5m; h=4m)" },
+              { id: "B", label: "Hình B (a=12,4m; b=6,6m; h=5m)" },
+              { id: "C", label: "Hình C (a=9,8m; b=5,2m; h=3m)" },
+              { id: "D", label: "Hình D (a=15,6m; b=10,4m; h=2,5m)" }
+            ],
+            answers: ["36", "47,5", "22,5", "32,5", "40,5"],
+            correctMapping: { "A": "36", "B": "47,5", "C": "22,5", "D": "32,5" }
+          },
+          {
+            id: "c2_4", type: "input",
+            text: "Mảnh vườn nhà An dạng hình thang có:\nĐáy lớn 15,2m; Đáy bé 9,8m; Chiều cao 5m.\nDiện tích mảnh vườn là: ______ m²",
+            answer: "62,5"
+          },
+          {
+            id: "c2_5", type: "fill_formula",
+            text: "Điền để hoàn thành công thức tính diện tích Hình Thang:\nS = ( ______ + ______ ) × h : 2",
+            answer1: "a", answer2: "b"
+          }
+        ]
+      },
+      {
+        id: 3,
+        title: "Vương Quốc Hình Tròn",
+        theme: "bg-blue-100 text-blue-900 border-blue-500",
+        headerColor: "bg-blue-500",
+        questions: [
+          {
+            id: "c3_1", type: "mcq",
+            text: "Một hình tròn có bán kính 3,5cm. Diện tích hình tròn là:",
+            options: ["38,465 cm²", "12,25 cm²", "24,5 cm²", "21,98 cm²"],
+            answer: "38,465 cm²"
+          },
+          {
+            id: "c3_2", type: "input",
+            text: "Một hình tròn có bán kính 2,4m.\nDiện tích hình tròn đó là: ______ m²",
+            answer: "18,0864"
+          },
+          {
+            id: "c3_3", type: "tf",
+            text: "Hình tròn có bán kính r = 3,5 m. Bạn Mai tính diện tích:\nS = 3,5 × 3,14 = 10,99 m²\nBạn Mai tính đúng hay sai?",
+            answer: "Sai"
+          },
+          {
+            id: "c3_4", type: "input",
+            text: "Một cái bánh pizza có ĐƯỜNG KÍNH 20,4cm.\nDiện tích của cái bánh là bao nhiêu cm²?",
+            answer: "326,6856"
+          },
+          {
+            id: "c3_5", type: "input",
+            text: "Bồn hoa dạng NỬA HÌNH TRÒN có đường kính d = 6 m.\nTính diện tích bồn hoa đó (m²).",
+            answer: "14,13"
+          }
+        ]
+      }
+    ];
+
+    // --- TIỆN ÍCH ÂM THANH (Web Audio API) ---
+    const playSound = (type) => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        if (type === 'correct') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'wrong') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
+          gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 0.3);
+        } else if (type === 'win') {
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'triangle';
+            o.frequency.value = freq;
+            o.connect(g);
+            g.connect(ctx.destination);
+            g.gain.setValueAtTime(0, ctx.currentTime);
+            g.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.1 + (i*0.1));
+            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+            o.start(ctx.currentTime + (i*0.1));
+            o.stop(ctx.currentTime + 1.5);
+          });
+        }
+      } catch (e) { console.log("Audio not supported"); }
+    };
+
+    // --- BIẾN TRẠNG THÁI (STATE) ---
+    let gameState = 'intro'; // intro, map, playing, stage_end, game_over
+    let currentStageIdx = 0;
+    let currentQuestionIdx = 0;
+    let score = 0;
+    let playerName = "";
+    
+    let feedback = null; // { isCorrect: boolean, msg: string }
+    let dropZones = {}; // Dành cho câu kéo thả
+
+    // --- CÁC HÀM XỬ LÝ LOGIC ---
+    function normalizeAnswer(val) {
+      return val.toString().trim().replace(/,/g, '.').toLowerCase();
+    }
+
+    function setupQuestion() {
+      feedback = null;
+      dropZones = {};
+    }
+
+    function startGame() {
+      const nameInput = document.getElementById('playerNameInput').value;
+      if (!nameInput.trim()) {
+        alert("Vui lòng nhập tên của bạn trước khi bắt đầu!");
+        return;
+      }
+      playerName = nameInput.trim();
+      gameState = 'map';
+      render();
+    }
+
+    function startStage() {
+      currentQuestionIdx = 0;
+      gameState = 'playing';
+      setupQuestion();
+      render();
+    }
+
+    function handleAnswer(isCorrect) {
+      if (isCorrect) {
+        playSound('correct');
+        score += 10;
+        feedback = { isCorrect: true, msg: "Tuyệt vời! Tiếp tục phát huy nào." };
+      } else {
+        playSound('wrong');
+        feedback = { isCorrect: false, msg: "Sai mất rồi! Đừng lo, hãy cố gắng ở câu tiếp theo." };
+      }
+      render(); // Cập nhật giao diện để hiện modal
+    }
+
+    function handleNextQuestion() {
+      feedback = null;
+      const stage = GAME_DATA[currentStageIdx];
+      if (currentQuestionIdx < stage.questions.length - 1) {
+        currentQuestionIdx++;
+        setupQuestion();
+        render();
+      } else {
+        handleStageEnd();
+      }
+    }
+
+    function handleStageEnd() {
+      playSound('win');
+      gameState = 'stage_end';
+      render();
+    }
+
+    function nextStage() {
+      if (currentStageIdx < GAME_DATA.length - 1) {
+        currentStageIdx++;
+        gameState = 'map';
+      } else {
+        gameState = 'game_over';
+      }
+      render();
+    }
+
+    // -- Submits cho từng loại câu hỏi --
+    function submitMCQ(option) {
+      if(feedback) return;
+      const question = GAME_DATA[currentStageIdx].questions[currentQuestionIdx];
+      const isCorrect = option === question.answer;
+      handleAnswer(isCorrect);
+    }
+
+    function submitInput() {
+      if(feedback) return;
+      const val = document.getElementById('ansInput').value;
+      if (!val) return;
+      const question = GAME_DATA[currentStageIdx].questions[currentQuestionIdx];
+      const isCorrect = normalizeAnswer(val) === normalizeAnswer(question.answer);
+      handleAnswer(isCorrect);
+    }
+
+    function submitTF(choice) {
+      if(feedback) return;
+      const question = GAME_DATA[currentStageIdx].questions[currentQuestionIdx];
+      const isCorrect = choice === question.answer;
+      handleAnswer(isCorrect);
+    }
+
+    function submitFormula() {
+      if(feedback) return;
+      const val1 = document.getElementById('ansInput1').value.trim().toLowerCase();
+      const val2 = document.getElementById('ansInput2').value.trim().toLowerCase();
+      const question = GAME_DATA[currentStageIdx].questions[currentQuestionIdx];
+      const correctA = question.answer1.toLowerCase();
+      const correctB = question.answer2.toLowerCase();
+      
+      const isCorrect = (val1 === correctA && val2 === correctB) || (val1 === correctB && val2 === correctA);
+      handleAnswer(isCorrect);
+    }
+
+    // -- Drag and Drop --
+    function handleDragStart(e, val) {
+      e.dataTransfer.setData("text/plain", val);
+    }
+
+    function handleDrop(e, zoneId) {
+      e.preventDefault();
+      const val = e.dataTransfer.getData("text/plain");
+      if(val) {
+        dropZones[zoneId] = val;
+        render(); // render lại để cập nhật UI mượt mà
+      }
+    }
+
+    function checkDragDrop() {
+      const question = GAME_DATA[currentStageIdx].questions[currentQuestionIdx];
+      if(Object.keys(dropZones).length < Object.keys(question.correctMapping).length) {
+        alert("Hãy ghép đáp án cho tất cả các hình nhé!");
+        return;
+      }
+      let isAllCorrect = true;
+      for (let key in question.correctMapping) {
+        if (dropZones[key] !== question.correctMapping[key]) {
+          isAllCorrect = false;
+          break;
+        }
+      }
+      handleAnswer(isAllCorrect);
+    }
+
+    function restartGame() {
+      window.location.reload();
+    }
+
+    // --- RENDER GIAO DIỆN CHÍNH ---
+    function render() {
+      const app = document.getElementById('app');
+      
+      if (gameState === 'intro') {
+        app.innerHTML = `
+          <div class="w-full mx-auto h-[600px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl shadow-2xl flex flex-col items-center justify-center p-8 text-white text-center">
+            <div class="text-8xl mb-6 animate-bounce">🗺️</div>
+            <h1 class="text-5xl font-extrabold mb-4 drop-shadow-lg">HÀNH TRÌNH CHINH PHỤC</h1>
+            <h2 class="text-6xl font-black text-yellow-300 drop-shadow-xl tracking-wider mb-8">DIỆN TÍCH</h2>
+            <p class="text-xl mb-6 max-w-lg bg-black/20 p-4 rounded-xl">Khám phá 3 vùng đất huyền bí: Tam Giác, Hình Thang và Hình Tròn. Vượt qua các thử thách để trở thành Bậc Thầy Toán Học!</p>
+            
+            <input 
+              id="playerNameInput"
+              type="text" 
+              placeholder="Nhập tên của bạn để bắt đầu..."
+              class="mb-8 px-6 py-4 rounded-full text-2xl text-center text-gray-900 font-bold focus:outline-none focus:ring-4 focus:ring-yellow-400 w-full max-w-md"
+              onkeydown="if(event.key === 'Enter') startGame()"
+            />
+
+            <button 
+              onclick="startGame()"
+              class="bg-yellow-400 text-blue-900 px-12 py-5 rounded-full text-3xl font-bold hover:bg-yellow-300 hover:scale-105 transition-all shadow-[0_8px_0_rgb(180,83,9)] active:shadow-[0_0px_0_rgb(180,83,9)] active:translate-y-2"
+            >
+              BẮT ĐẦU NGAY 🚀
+            </button>
+          </div>
+        `;
+      } 
+      
+      else if (gameState === 'map') {
+        let mapHTML = `
+          <div class="w-full mx-auto h-[600px] bg-sky-100 rounded-3xl shadow-2xl p-8 flex flex-col">
+            <h2 class="text-4xl font-bold text-center text-sky-800 mb-8">BẢN ĐỒ HÀNH TRÌNH</h2>
+            <div class="flex-1 flex flex-col justify-center gap-6 relative">
+              <div class="absolute left-1/2 top-10 bottom-10 w-2 bg-sky-300 -translate-x-1/2 z-0 rounded-full"></div>
+        `;
+        
+        GAME_DATA.forEach((s, idx) => {
+          let stateClasses = '';
+          let icon = '';
+          if (idx < currentStageIdx) {
+            stateClasses = 'bg-gray-300 border-gray-400 opacity-80';
+            icon = '✅';
+          } else if (idx === currentStageIdx) {
+            stateClasses = `${s.theme} scale-105 animate-pulse`;
+            icon = '📍';
+          } else {
+            stateClasses = 'bg-white border-dashed border-gray-300 opacity-50';
+            icon = '🔒';
+          }
+
+          mapHTML += `
+              <div class="z-10 flex items-center justify-center">
+                <div class="w-full max-w-md p-6 rounded-2xl flex items-center justify-between border-4 shadow-xl transition-all ${stateClasses}">
+                  <div class="text-left">
+                    <div class="text-sm font-bold uppercase opacity-70">Chặng ${s.id}</div>
+                    <div class="text-2xl font-black">${s.title}</div>
+                  </div>
+                  <div class="text-4xl">${icon}</div>
+                </div>
+              </div>
+          `;
+        });
+
+        const currentHeaderColor = GAME_DATA[currentStageIdx].headerColor;
+        mapHTML += `
+            </div>
+            <div class="text-center mt-6">
+              <button 
+                onclick="startStage()"
+                class="px-10 py-4 rounded-full text-2xl font-bold text-white shadow-lg transform transition hover:scale-105 ${currentHeaderColor}"
+              >
+                VÀO CHẶNG ${currentStageIdx + 1} ⚔️
+              </button>
+            </div>
+          </div>
+        `;
+        app.innerHTML = mapHTML;
+      } 
+      
+      else if (gameState === 'playing') {
+        const stage = GAME_DATA[currentStageIdx];
+        const question = stage.questions[currentQuestionIdx];
+        const borderColor = stage.headerColor.replace('bg-', 'border-');
+
+        let feedbackHTML = '';
+        if (feedback) {
+          const bgClass = feedback.isCorrect ? 'bg-green-100 border-green-500 text-green-800' : 'bg-red-100 border-red-500 text-red-800';
+          const icon = feedback.isCorrect ? '🌟' : '💔';
+          const btnClass = feedback.isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600';
+          
+          feedbackHTML = `
+            <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-xl">
+              <div class="p-8 rounded-2xl text-center transform modal-enter border-4 shadow-2xl flex flex-col items-center gap-6 ${bgClass}">
+                <div class="text-6xl">${icon}</div>
+                <h2 class="text-3xl font-bold font-sans max-w-sm whitespace-pre-line leading-relaxed">${feedback.msg}</h2>
+                <button
+                  onclick="handleNextQuestion()"
+                  class="px-8 py-3 rounded-full text-xl font-bold text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${btnClass}"
+                >
+                  Tiếp tục ➡
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        let interactiveHTML = '';
+        
+        if (question.type === 'mcq') {
+          let optsHTML = question.options.map(opt => `
+            <button 
+              onclick="submitMCQ('${opt}')"
+              class="bg-white border-4 border-blue-200 text-blue-900 text-2xl font-bold py-6 rounded-2xl hover:bg-blue-100 hover:border-blue-400 hover:scale-105 transition-all shadow-md active:scale-95"
+            >
+              ${opt}
+            </button>
+          `).join('');
+          interactiveHTML = `<div class="grid grid-cols-2 gap-6 w-full max-w-2xl">${optsHTML}</div>`;
+        } 
+        else if (question.type === 'tf') {
+          interactiveHTML = `
+            <div class="flex gap-10 w-full max-w-xl">
+              <button onclick="submitTF('Đúng')" class="flex-1 bg-green-100 border-4 border-green-500 text-green-700 text-4xl font-bold py-8 rounded-3xl hover:bg-green-200 hover:scale-105 transition shadow-lg">
+                ĐÚNG ✅
+              </button>
+              <button onclick="submitTF('Sai')" class="flex-1 bg-red-100 border-4 border-red-500 text-red-700 text-4xl font-bold py-8 rounded-3xl hover:bg-red-200 hover:scale-105 transition shadow-lg">
+                SAI ❌
+              </button>
+            </div>
+          `;
+        } 
+        else if (question.type === 'input') {
+          interactiveHTML = `
+            <div class="flex flex-col items-center gap-6 w-full">
+              <input 
+                id="ansInput"
+                type="text" 
+                placeholder="Nhập số vào đây..."
+                class="text-4xl text-center font-bold p-6 border-4 border-gray-300 rounded-2xl w-full max-w-md focus:outline-none focus:border-blue-500 shadow-inner"
+                onkeydown="if(event.key === 'Enter') submitInput()"
+              />
+              <button 
+                onclick="submitInput()"
+                class="${stage.headerColor} text-white px-12 py-4 rounded-full text-2xl font-bold shadow-lg hover:scale-105 active:scale-95 transition"
+              >
+                TRẢ LỜI 🚀
+              </button>
+            </div>
+          `;
+        } 
+        else if (question.type === 'fill_formula') {
+          interactiveHTML = `
+            <div class="flex flex-col items-center gap-6 w-full">
+               <div class="flex items-center gap-4 text-4xl font-bold text-gray-800">
+                  S = ( 
+                  <input id="ansInput1" type="text" class="w-20 text-center border-b-4 border-gray-400 focus:outline-none focus:border-blue-500 bg-transparent text-blue-600" />
+                  +
+                  <input id="ansInput2" type="text" class="w-20 text-center border-b-4 border-gray-400 focus:outline-none focus:border-blue-500 bg-transparent text-blue-600" />
+                  ) × h : 2
+               </div>
+               <button onclick="submitFormula()" class="${stage.headerColor} mt-8 text-white px-12 py-4 rounded-full text-2xl font-bold shadow-lg hover:scale-105 transition">
+                KIỂM TRA ✔️
+              </button>
+            </div>
+          `;
+        } 
+        else if (question.type === 'dragdrop') {
+          let dropZonesHTML = question.items.map(item => {
+            const val = dropZones[item.id];
+            const dropClass = val ? 'bg-green-100 border-green-500 text-green-800 shadow-inner' : 'bg-gray-100 border-gray-300 text-gray-400';
+            const displayTxt = val ? val + " m²" : "Thả vào đây";
+            return `
+              <div class="flex items-center justify-between bg-white p-4 rounded-xl border-2 border-dashed border-gray-300">
+                <span class="font-bold text-lg text-gray-700">${item.label}</span>
+                <div 
+                  ondragover="event.preventDefault()"
+                  ondrop="handleDrop(event, '${item.id}')"
+                  class="w-32 h-12 rounded-lg flex items-center justify-center font-bold text-lg border-2 ${dropClass}"
+                >
+                  ${displayTxt}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          let answersHTML = question.answers.map(ans => {
+            const isUsed = Object.values(dropZones).includes(ans);
+            if (isUsed) return '';
+            return `
+              <div 
+                draggable="true"
+                ondragstart="handleDragStart(event, '${ans}')"
+                class="bg-yellow-200 border-2 border-yellow-500 text-yellow-900 font-bold text-xl py-3 px-6 rounded-xl cursor-grab active:cursor-grabbing hover:bg-yellow-300 shadow-md transform hover:-translate-y-1 transition"
+              >
+                ${ans} m²
+              </div>
+            `;
+          }).join('');
+
+          interactiveHTML = `
+            <div class="flex w-full gap-8 h-full">
+              <div class="flex-1 flex flex-col gap-4">
+                <h3 class="text-xl font-bold text-gray-600 border-b-2 pb-2">CỘT 1: CÁC HÌNH THANG</h3>
+                ${dropZonesHTML}
+              </div>
+              <div class="w-1/3 flex flex-col gap-4 border-l-2 pl-8">
+                <h3 class="text-xl font-bold text-gray-600 border-b-2 pb-2">CỘT 2: ĐÁP ÁN</h3>
+                <div class="flex flex-wrap gap-3">${answersHTML}</div>
+                <div class="mt-auto">
+                  <button onclick="checkDragDrop()" class="${stage.headerColor} w-full text-white py-4 rounded-xl text-xl font-bold shadow-lg hover:brightness-110">
+                    NỘP BÀI 📝
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        app.innerHTML = `
+          <div class="w-full mx-auto h-[650px] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border-8 ${borderColor}">
+            <!-- Header -->
+            <div class="${stage.headerColor} text-white p-4 flex justify-between items-center shadow-md relative z-10">
+              <div class="flex items-center gap-3">
+                <span class="bg-black/20 px-4 py-2 rounded-xl font-bold text-lg">Chặng ${stage.id}: ${stage.title}</span>
+                <span class="bg-white/20 px-4 py-2 rounded-xl font-bold text-lg">Câu ${currentQuestionIdx + 1}/${stage.questions.length}</span>
+              </div>
+              <div class="flex items-center gap-4 text-xl font-black">
+                <div class="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-xl">👤 ${playerName}</div>
+                <div class="flex items-center gap-2 bg-yellow-400 text-yellow-900 px-4 py-2 rounded-xl">⭐ ${score}</div>
+              </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="flex-1 p-8 relative flex flex-col bg-gray-50">
+              ${feedbackHTML}
+              <div class="flex-1 flex flex-col relative z-0">
+                <div class="text-2xl md:text-3xl font-bold text-center mb-8 text-gray-800 whitespace-pre-line leading-relaxed">
+                  ${question.text}
+                </div>
+                <div class="flex-1 flex flex-col justify-center items-center w-full">
+                  ${interactiveHTML}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Auto-focus input sau khi render (nếu có input)
+        const inputElem = document.getElementById('ansInput');
+        if (inputElem && !feedback) inputElem.focus();
+      } 
+      
+      else if (gameState === 'stage_end') {
+        const stage = GAME_DATA[currentStageIdx];
+        const btnText = currentStageIdx < GAME_DATA.length - 1 ? "ĐI TỚI CHẶNG TIẾP THEO ➡" : "XEM KẾT QUẢ CUỐI CÙNG 🎖️";
+        
+        app.innerHTML = `
+          <div class="w-full mx-auto h-[600px] bg-gray-900 rounded-3xl shadow-2xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+            <div class="absolute top-1/4 left-1/4 w-4 h-4 bg-yellow-400 rounded-full shadow-[0_0_50px_20px_#facc15] animate-ping"></div>
+            <div class="absolute top-1/3 right-1/4 w-4 h-4 bg-pink-400 rounded-full shadow-[0_0_50px_20px_#f472b6] animate-ping" style="animation-delay: 0.5s"></div>
+            <div class="absolute bottom-1/3 left-1/2 w-4 h-4 bg-green-400 rounded-full shadow-[0_0_50px_20px_#4ade80] animate-ping" style="animation-delay: 0.2s"></div>
+            
+            <h2 class="text-6xl font-black text-white mb-6 z-10 drop-shadow-lg">CHÚC MỪNG! 🎉</h2>
+            <p class="text-2xl text-gray-300 z-10 mb-8">Bạn đã hoàn thành xuất sắc ${stage.title}</p>
+            <div class="text-8xl mb-8 z-10">🏆</div>
+            <p class="text-3xl text-yellow-400 font-bold z-10 mb-12">Điểm hiện tại: ${score}</p>
+            
+            <button 
+              onclick="nextStage()"
+              class="z-10 bg-white text-gray-900 px-10 py-4 rounded-full text-2xl font-bold hover:bg-gray-200 transition shadow-[0_6px_0_rgb(156,163,175)] active:translate-y-2 active:shadow-none"
+            >
+              ${btnText}
+            </button>
+          </div>
+        `;
+      } 
+      
+      else if (gameState === 'game_over') {
+        app.innerHTML = `
+          <div class="w-full mx-auto h-[600px] bg-gradient-to-b from-yellow-300 to-yellow-600 rounded-3xl shadow-2xl p-8 flex flex-col items-center justify-center text-center">
+            <h1 class="text-6xl font-black text-white drop-shadow-md mb-6">CHIẾN THẮNG! 👑</h1>
+            <p class="text-3xl text-white mb-8">Chúc mừng <span class="font-bold text-blue-900">${playerName}</span> đã chinh phục toàn bộ Vương Quốc!</p>
+            <div class="bg-white/30 backdrop-blur-md p-10 rounded-3xl shadow-xl mb-10">
+              <div class="text-4xl text-yellow-900 font-bold mb-4">Tổng Điểm Của Bạn</div>
+              <div class="text-8xl font-black text-white drop-shadow-xl">${score}</div>
+            </div>
+            <button 
+              onclick="restartGame()"
+              class="bg-red-500 text-white px-8 py-4 rounded-full text-2xl font-bold hover:bg-red-600 shadow-lg"
+            >
+              Chơi Lại Từ Đầu 🔄
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // --- KHỞI ĐỘNG ỨNG DỤNG ---
+    render();
+
+  </script>
+</body>
+</html>

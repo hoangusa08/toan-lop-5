@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biệt Đội Hình Khối Không Gian</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .btn-option {
+            transition: all 0.2s;
+        }
+        .btn-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn-option:active {
+            transform: translateY(1px);
+        }
+        .correct-anim {
+            animation: pulse-green 0.5s;
+            background-color: #10b981 !important; /* emerald-500 */
+            border-color: #059669 !important;
+            color: white !important;
+        }
+        .wrong-anim {
+            animation: shake 0.5s;
+            background-color: #ef4444 !important; /* red-500 */
+            border-color: #b91c1c !important;
+            color: white !important;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        #confetti-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="confetti-container"></div>
+
+    <div id="app-container" class="w-full max-w-3xl glass-panel rounded-3xl shadow-2xl overflow-hidden relative">
+        
+        <!-- INTRO SCREEN -->
+        <div id="screen-intro" class="p-8 text-center flex flex-col items-center justify-center min-h-[500px]">
+            <div class="text-6xl mb-6 animate-bounce">🚀🧊</div>
+            <h1 class="text-4xl md:text-5xl font-black mb-6 text-yellow-300 drop-shadow-lg leading-tight">
+                BIỆT ĐỘI<br>HÌNH KHỐI KHÔNG GIAN
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 max-w-lg leading-relaxed">
+                Chào mừng các bạn! Hôm nay chúng ta sẽ chinh phục những thử thách với những chiếc hộp và khối lập phương! Sẵn sàng chưa?
+            </p>
+            <button onclick="startGame()" class="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-gray-900 font-bold py-4 px-10 rounded-full text-2xl shadow-xl transform transition hover:scale-105 active:scale-95">
+                <i class="fas fa-play mr-2"></i> BẮT ĐẦU!
+            </button>
+        </div>
+
+        <!-- QUIZ SCREEN -->
+        <div id="screen-quiz" class="hidden flex-col min-h-[500px]">
+            <!-- Header -->
+            <div class="bg-indigo-900 bg-opacity-50 p-4 flex justify-between items-center border-b border-indigo-700">
+                <div class="font-bold text-yellow-300 tracking-wider">
+                    <i class="fas fa-star mr-1"></i> ĐIỂM: <span id="score-display">0</span>
+                </div>
+                <div class="font-bold">
+                    CẤP ĐỘ <span id="level-display">1</span>/<span id="total-levels">10</span>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 md:p-8 flex-grow flex flex-col">
+                <div class="text-center mb-6">
+                    <span id="q-icon" class="text-4xl mb-2 block"></span>
+                    <h2 id="q-title" class="text-2xl font-black text-blue-200 uppercase tracking-wide">TÊN TRÒ CHƠI</h2>
+                </div>
+                
+                <div class="bg-white bg-opacity-10 p-6 rounded-2xl mb-8 border border-white border-opacity-20">
+                    <p id="q-text" class="text-xl md:text-2xl leading-relaxed text-center font-semibold whitespace-pre-line"></p>
+                </div>
+
+                <!-- Input Field (For fill in the blank) -->
+                <div id="input-container" class="hidden flex-col items-center mt-auto mb-4">
+                    <input type="text" id="q-input" class="w-full max-w-md text-center text-2xl font-bold text-indigo-900 py-4 px-6 rounded-xl border-4 border-indigo-200 focus:outline-none focus:border-yellow-400 mb-4" placeholder="Nhập đáp án..." autocomplete="off">
+                    <button onclick="checkInputAnswer()" id="submit-input-btn" class="bg-yellow-400 hover:bg-yellow-300 text-indigo-900 font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                        Gửi đáp án <i class="fas fa-paper-plane ml-2"></i>
+                    </button>
+                </div>
+
+                <!-- Options -->
+                <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto">
+                    <!-- Buttons generated by JS -->
+                </div>
+
+                <!-- Feedback Area (Hidden by default) -->
+                <div id="feedback-area" class="hidden mt-6 p-6 rounded-2xl text-center">
+                    <h3 id="feedback-title" class="text-2xl font-bold mb-2"></h3>
+                    <p id="feedback-desc" class="text-lg mb-4 whitespace-pre-line"></p>
+                    <button onclick="nextQuestion()" id="next-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                        Tiếp tục <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- END SCREEN -->
+        <div id="screen-end" class="hidden p-8 text-center flex-col items-center justify-center min-h-[500px]">
+            <div class="text-7xl mb-6">🏆</div>
+            <h1 class="text-4xl font-black mb-4 text-yellow-300">NHIỆM VỤ HOÀN THÀNH!</h1>
+            <p class="text-2xl mb-8">Bạn đã chứng tỏ mình là một chuyên gia hình khối xuất sắc!</p>
+            <div class="text-xl mb-8 bg-white bg-opacity-20 p-6 rounded-2xl inline-block">
+                Số câu đúng: <span id="final-score" class="font-bold text-yellow-300 text-3xl">0</span> / <span id="final-total">10</span>
+            </div>
+            <button onclick="location.reload()" class="bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-8 rounded-full text-xl shadow-xl transition transform hover:scale-105">
+                <i class="fas fa-redo mr-2"></i> Chơi lại từ đầu
+            </button>
+        </div>
+
+    </div>
+
+    <!-- AUDIO SYSTEM (Web Audio API) -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playTone(freq, type, duration, vol=0.1) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function playCorrectSound() {
+            // "Ting ting" sound
+            playTone(880, 'sine', 0.1, 0.2); // A5
+            setTimeout(() => playTone(1108.73, 'sine', 0.3, 0.2), 100); // C#6
+        }
+
+        function playWrongSound() {
+            // Soft "Bụp" sound
+            playTone(150, 'triangle', 0.2, 0.3);
+            setTimeout(() => playTone(100, 'sawtooth', 0.3, 0.3), 150);
+        }
+
+        function playVictorySound() {
+            const notes = [440, 554.37, 659.25, 880]; // A major arpeggio
+            notes.forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 'sine', i===3 ? 0.6 : 0.15, 0.2), i * 150);
+            });
+        }
+    </script>
+
+    <!-- GAME LOGIC -->
+    <script>
+        const questions = [
+            {
+                type: 'choice',
+                icon: "🎁",
+                title: "CÂU 1: NHÀ THIẾT KẾ HỘP QUÀ",
+                text: "Một hộp quà hình lập phương có cạnh 2,5 dm. Hỏi diện tích toàn phần của hộp là bao nhiêu?",
+                options: ["A. 31,25 dm²", "B. 37,5 dm²", "C. 46,875 dm²", "D. 62,5 dm²"],
+                correct: 1 // Index 1 is B
+            },
+            {
+                type: 'choice',
+                icon: "📦",
+                title: "CÂU 2: GIẢI CỨU KHO HÀNG",
+                text: "Một thùng hàng dạng hình hộp chữ nhật có chiều dài 1,2 m; chiều rộng 0,8 m và chiều cao 0,6 m. Hỏi diện tích xung quanh của thùng là bao nhiêu?",
+                options: ["A. 2,4 m²", "B. 2,88 m²", "C. 3,6 m²", "D. 4,8 m²"],
+                correct: 0
+            },
+            {
+                type: 'choice',
+                icon: "🧊",
+                title: "CÂU 3: KHO BÁU SỐ THẬP PHÂN",
+                text: "Một khối rubik hình lập phương có cạnh 3,5 cm. Diện tích xung quanh của khối rubik đó là bao nhiêu?",
+                options: ["A. 42,8 cm²", "B. 73,5 cm²", "C. 49 cm²", "D. 56 cm²"],
+                correct: 2 // Index 2 is C
+            },
+            {
+                type: 'choice',
+                icon: "🏗️",
+                title: "CÂU 4: KIẾN TRÚC SƯ THÔNG MINH",
+                text: "Một bể cá dạng hình hộp chữ nhật (không nắp) có: dài 0,75m; rộng 0,5m; cao 0,4m. Người ta sơn toàn bộ mặt ngoài. Diện tích cần sơn là bao nhiêu m²?",
+                options: ["A. 1,0 m²", "B. 1,375 m²", "C. 1,75 m²", "D. 2,375 m²"],
+                correct: 1
+            },
+            {
+                type: 'choice',
+                icon: "⚡",
+                title: "CÂU 5: THỬ THÁCH SUY LUẬN",
+                text: "Một hình lập phương có diện tích toàn phần là 54 dm². Hỏi cạnh của hình lập phương đó dài bao nhiêu?",
+                options: ["A. 2 dm", "B. 3 dm", "C. 4 dm", "D. 5 dm"],
+                correct: 1
+            },
+            {
+                type: 'choice',
+                icon: "🔄",
+                title: "CÂU 6: ĐỔI ĐƠN VỊ THÔNG MINH",
+                text: "Một tủ gỗ dạng hình hộp chữ nhật có: chiều dài 1,5 m; chiều rộng 80 cm và chiều cao 1 m. Diện tích xung quanh của tủ gỗ đó là bao nhiêu m²?",
+                options: ["A. 4,6 m²", "B. 46 m²", "C. 2,3 m²", "D. 460 m²"],
+                correct: 0
+            },
+            {
+                type: 'choice',
+                icon: "⚖️",
+                title: "CÂU 7: AI TINH MẮT HƠN?",
+                text: "Khối A: Hình lập phương cạnh 2,4 dm.\nKhối B: Hình hộp chữ nhật (Dài 2,4dm; Rộng 2,4dm; Cao 3dm).\nHai khối có diện tích toàn phần thế nào?",
+                options: ["A. Bằng nhau", "B. Khối A lớn hơn", "C. Khối B lớn hơn"],
+                correct: 2
+            },
+            {
+                type: 'input',
+                icon: "⏱️",
+                title: "CÂU 8: AI NHANH – AI ĐÚNG?",
+                text: "Một hình lập phương có cạnh 1,8 dm. Hãy tính diện tích xung quanh của hình đó.\n\nDiện tích xung quanh của hình đó là: ______ dm²\n(Bạn hãy gõ số vào ô trống bên dưới)",
+                correctAnswers: ["12,96", "12.96", "12,96 dm2", "12.96 dm2", "12,96 dm²", "12.96 dm²"],
+                correctMsg: "Xuất sắc! !",
+                wrongMsg: "Bạn hãy cố gắng hơn nhé!"
+            },
+            {
+                type: 'choice',
+                icon: "🕵️",
+                title: "CÂU 9: SĂN LỖI SAI",
+                text: "Một hình hộp chữ nhật có Dài 2,5dm; Rộng 1,5dm; Cao 2dm.\nNam tính:\nSxq = (2,5 + 1,5) × 2 × 2 = 16\nSđáy = 2,5 × 1,5 = 3,75\nStp = 16 + 3,75 = 19,75 dm²\n\nNam làm đúng hay sai?",
+                options: ["A. Đúng", "B. Sai"],
+                correct: 1, // Sai
+                correctMsg: "Bạn đã phát hiện lỗi rất giỏi!",
+                wrongMsg: "Hãy cẩn thận hơn nhé!"
+            },
+            {
+                type: 'choice',
+                icon: "🗝️",
+                title: "CÂU 10: MỞ KHÓA BÍ ẨN",
+                text: "Một hình lập phương có cạnh 0,5 m. Phát biểu nào sau đây là đúng?",
+                options: ["A. Diện tích xung quanh là 1 m²", "B. Diện tích toàn phần là 1,5 m²", "C. Diện tích toàn phần là 1,25 m²", "D. Diện tích xung quanh là 0,5 m²"],
+                correct: 1, // B
+                correctMsg: "Cánh cửa bí mật đã mở!",
+                wrongMsg: "Hãy kiểm tra lại nhé!"
+            }
+        ];
+
+        let currentQIndex = 0;
+        let score = 0;
+        let isAnswering = false;
+
+        function startGame() {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('screen-quiz').classList.add('flex');
+            
+            document.getElementById('total-levels').innerText = questions.length;
+            document.getElementById('final-total').innerText = questions.length;
+            
+            createConfetti(30); 
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            const q = questions[currentQIndex];
+            
+            document.getElementById('level-display').innerText = currentQIndex + 1;
+            document.getElementById('q-icon').innerText = q.icon;
+            document.getElementById('q-title').innerText = q.title;
+            document.getElementById('q-text').innerText = q.text;
+            
+            const optionsContainer = document.getElementById('options-container');
+            const inputContainer = document.getElementById('input-container');
+            const feedbackArea = document.getElementById('feedback-area');
+            
+            optionsContainer.innerHTML = '';
+            feedbackArea.classList.add('hidden');
+            
+            if (q.type === 'choice') {
+                inputContainer.classList.add('hidden');
+                optionsContainer.classList.remove('hidden');
+                
+                q.options.forEach((opt, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = "btn-option bg-white bg-opacity-90 text-indigo-900 text-lg md:text-xl font-bold py-4 px-6 rounded-xl border-b-4 border-indigo-200 text-left w-full";
+                    btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(index, btn);
+                    optionsContainer.appendChild(btn);
+                });
+            } else if (q.type === 'input') {
+                optionsContainer.classList.add('hidden');
+                inputContainer.classList.remove('hidden');
+                
+                const inputEl = document.getElementById('q-input');
+                inputEl.value = '';
+                inputEl.disabled = false;
+                inputEl.classList.remove('opacity-50', 'correct-anim', 'wrong-anim');
+                document.getElementById('submit-input-btn').disabled = false;
+                document.getElementById('submit-input-btn').classList.remove('opacity-50');
+                
+                inputEl.onkeypress = function(e) {
+                    if (e.key === 'Enter') checkInputAnswer();
+                };
+            }
+        }
+
+        function checkInputAnswer() {
+            if (isAnswering) return;
+            
+            const inputEl = document.getElementById('q-input');
+            const val = inputEl.value.trim().toLowerCase();
+            if (!val) return; 
+            
+            isAnswering = true;
+            const q = questions[currentQIndex];
+            const isCorrect = q.correctAnswers.includes(val);
+            
+            inputEl.disabled = true;
+            document.getElementById('submit-input-btn').disabled = true;
+            document.getElementById('submit-input-btn').classList.add('opacity-50');
+            
+            if (isCorrect) {
+                inputEl.classList.add('correct-anim');
+            } else {
+                inputEl.classList.add('wrong-anim');
+            }
+            
+            showFeedback(isCorrect, q.correctMsg, q.wrongMsg);
+        }
+
+        function checkAnswer(selectedIndex, btnElement) {
+            if (isAnswering) return;
+            isAnswering = true;
+
+            const q = questions[currentQIndex];
+            const isCorrect = (selectedIndex === q.correct);
+            const optionsContainer = document.getElementById('options-container');
+
+            Array.from(optionsContainer.children).forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                if(idx === q.correct) {
+                    btn.classList.remove('opacity-50');
+                    btn.classList.add('bg-green-500', 'text-white', 'border-green-700');
+                }
+            });
+
+            if (isCorrect) {
+                btnElement.classList.add('correct-anim');
+            } else {
+                btnElement.classList.add('wrong-anim');
+                btnElement.classList.remove('opacity-50');
+            }
+
+            showFeedback(isCorrect, q.correctMsg, q.wrongMsg);
+        }
+
+        function showFeedback(isCorrect, customCorrectMsg, customWrongMsg) {
+            const feedbackArea = document.getElementById('feedback-area');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackDesc = document.getElementById('feedback-desc');
+            
+            const msgCorrect = customCorrectMsg || "Ting ting! Chính xác!";
+            const msgWrong = customWrongMsg || "Hãy cố gắng ở các câu tiếp theo nhé!";
+
+            if (isCorrect) {
+                playCorrectSound();
+                score++;
+                document.getElementById('score-display').innerText = score;
+                feedbackArea.className = "mt-6 p-6 rounded-2xl text-center bg-green-500 bg-opacity-20 border border-green-400 block";
+                feedbackTitle.innerHTML = `<i class="fas fa-check-circle text-green-400"></i> ${msgCorrect}`;
+                feedbackDesc.innerText = "";
+                createConfetti(20);
+            } else {
+                playWrongSound();
+                feedbackArea.className = "mt-6 p-6 rounded-2xl text-center bg-red-500 bg-opacity-20 border border-red-400 block";
+                feedbackTitle.innerHTML = '<i class="fas fa-times-circle text-red-400"></i> Sai mất rồi!';
+                feedbackDesc.innerText = msgWrong;
+            }
+
+            if(currentQIndex === questions.length - 1) {
+                document.getElementById('next-btn').innerHTML = 'Xem kết quả <i class="fas fa-flag-checkered ml-2"></i>';
+            }
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            if (currentQIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('flex');
+            document.getElementById('screen-end').classList.remove('hidden');
+            document.getElementById('screen-end').classList.add('flex');
+            document.getElementById('final-score').innerText = score;
+            playVictorySound();
+            createConfetti(100);
+        }
+
+        // Simple Confetti Particle System
+        function createConfetti(amount) {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#fde047', '#f97316', '#10b981', '#3b82f6', '#ec4899'];
+            
+            for (let i = 0; i < amount; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                const left = Math.random() * 100;
+                const animDuration = 1.5 + Math.random() * 2;
+                const delay = Math.random() * 0.5;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                confetti.style.left = `${left}vw`;
+                confetti.style.top = `-10px`;
+                confetti.style.backgroundColor = color;
+                confetti.style.animationDuration = `${animDuration}s`;
+                confetti.style.animationDelay = `${delay}s`;
+                
+                container.appendChild(confetti);
+                
+                setTimeout(() => {
+                    confetti.remove();
+                }, (animDuration + delay) * 1000);
+            }
+        }
+    </script>
+</body>
+</html>
