@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mô phỏng Thể tích nước - Lớp 5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js cho 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GSAP cho Animation mượt mà -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0fdfa; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        
+        /* UI Overlay */
+        .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        
+        /* 3D Labels */
+        .label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #1e293b;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transform: translate(-50%, -50%);
+            transition: opacity 0.3s;
+            pointer-events: none;
+            border: 2px solid #e2e8f0;
+            font-size: 14px;
+        }
+        
+        /* Control Panel */
+        .control-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 20px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            pointer-events: auto;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 320px;
+        }
+
+        /* Custom Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-weight: bold;
+            color: #475569;
+        }
+        
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 150px;
+            background: transparent;
+        }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 10px;
+            cursor: pointer;
+            background: #cbd5e1;
+            border-radius: 5px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -7px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+    </style>
+</head>
+<body>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div class="ui-layer">
+        
+        <!-- === NHÃN TÊN HÌNH (Chỉ hiện khi đã lật) === -->
+        <div id="label-hinh1" class="absolute transform -translate-x-1/2 text-xl font-extrabold text-teal-900 transition-opacity duration-300 drop-shadow-md" style="opacity: 0; pointer-events: none;">Hình 1</div>
+        <div id="label-hinh2" class="absolute transform -translate-x-1/2 text-xl font-extrabold text-teal-900 transition-opacity duration-300 drop-shadow-md" style="opacity: 0; pointer-events: none;">Hình 2</div>
+
+        <!-- === NHÃN HÌNH 1 (TRÁI) CỐ ĐỊNH === -->
+        <div id="label-h-top" class="absolute flex items-center gap-1 transform -translate-x-full -translate-y-1/2" style="pointer-events: none;">
+            <span class="text-gray-800 font-bold text-lg bg-white/60 px-1 rounded-md">8 cm</span>
+        </div>
+        
+        <div id="label-h-bot" class="absolute flex items-center gap-1 transform -translate-x-full -translate-y-1/2" style="pointer-events: none;">
+            <span class="text-gray-800 font-bold text-lg bg-white/60 px-1 rounded-md">8 cm</span>
+        </div>
+
+        <div id="label-w" class="absolute transform -translate-x-1/2 mt-2" style="pointer-events: none;">
+            <span class="text-gray-800 font-bold text-lg bg-white/60 px-1 rounded-md">8 cm</span>
+        </div>
+
+        <div id="label-d" class="absolute transform mt-2" style="pointer-events: none;">
+            <span class="text-gray-800 font-bold text-lg bg-white/60 px-1 rounded-md">8 cm</span>
+        </div>
+
+        <!-- === NHÃN HÌNH 2 (PHẢI) === -->
+        <div id="label-question" class="absolute flex items-center gap-1 transition-opacity duration-300 transform -translate-x-full -translate-y-1/2" style="opacity: 0; pointer-events: none;">
+            <span id="question-text" class="text-red-600 font-bold text-2xl bg-white/70 px-1 rounded-md drop-shadow-sm">? cm</span>
+            <svg width="12" height="60" viewBox="0 0 12 60" class="text-gray-800">
+                <path d="M6 2 L6 58 M2 6 L6 2 L10 6 M2 54 L6 58 L10 54" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </div>
+
+        <!-- Controls -->
+        <div class="control-panel border-2 border-blue-100">
+            <div class="text-sm text-gray-500 mb-1">Lật bể nước</div>
+            
+            <div class="toggle-container">
+                <span id="text-dung" class="text-blue-600 transition-colors">Đứng</span>
+                <input type="range" id="state-slider" min="0" max="100" value="0">
+                <span id="text-nam" class="text-gray-400 transition-colors">Nằm</span>
+            </div>
+
+            <button id="btn-answer" class="mt-2 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2 px-6 rounded-xl transition-all shadow-md transform hover:scale-105 opacity-0 pointer-events-none">
+                Xem đáp án
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SETUP THREE.JS SCENE ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#f0fdfa');
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Dịch chuyển camera để nhìn bao quát được cả 2 khối hộp
+        camera.position.set(2, 18, 50);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1; 
+        controls.minDistance = 20;
+        controls.maxDistance = 80;
+        controls.target.set(2, 5, 0);
+
+        // Lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Floor
+        const floorGeo = new THREE.PlaneGeometry(200, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.8 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // --- 2. BUILD 3D OBJECTS (MATERIALS & GEOMETRIES) ---
+
+        const boxWidth = 8, boxHeight = 16, boxDepth = 8;
+        
+        // Hình học của hộp kính (tâm ở mặt đáy để dễ xoay)
+        const glassGeo = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+        glassGeo.translate(0, boxHeight/2, 0); 
+        
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0xffffff,
+            transmission: 0.9,
+            opacity: 1,
+            metalness: 0,
+            roughness: 0.1,
+            transparent: true,
+            side: THREE.DoubleSide,
+            depthWrite: false
+        });
+        
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 2 });
+        const glassLinesGeo = new THREE.EdgesGeometry(glassGeo);
+
+        // Hình học của khối nước (tâm ở đáy)
+        const waterGeo = new THREE.BoxGeometry(1, 1, 1);
+        waterGeo.translate(0, 0.5, 0);
+        // MÀU NƯỚC ĐẬM HƠN (Deep Blue)
+        const waterMat = new THREE.MeshPhysicalMaterial({
+            color: 0x0284c7, 
+            transmission: 0.5, // Giảm transmission để màu đặc hơn
+            opacity: 0.95,
+            transparent: true,
+            roughness: 0.1
+        });
+
+        // Hàm tạo chiếc thuyền
+        function createBoat() {
+            const boatGroup = new THREE.Group();
+            
+            // Thân thuyền (Đỏ)
+            const hullGeo = new THREE.ConeGeometry( 0.8, 0.4, 4, 1, false, Math.PI/4 );
+            hullGeo.rotateX(Math.PI); 
+            const hullMat = new THREE.MeshLambertMaterial({ color: '#dc2626' }); 
+            const hull = new THREE.Mesh(hullGeo, hullMat);
+            hull.position.y = 0.2;
+            boatGroup.add(hull);
+
+            // Cabin (Xanh lá)
+            const cabinGeo = new THREE.BoxGeometry(0.5, 0.3, 0.4);
+            const cabinMat = new THREE.MeshLambertMaterial({ color: '#84cc16' });
+            const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+            cabin.position.set(0, 0.55, 0);
+            boatGroup.add(cabin);
+
+            // Cột cờ (Xanh dương)
+            const poleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.5);
+            const poleMat = new THREE.MeshLambertMaterial({ color: '#2563eb' });
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.set(0, 0.8, 0);
+            boatGroup.add(pole);
+
+            // Lá cờ (Vàng)
+            const flagGeo = new THREE.PlaneGeometry(0.3, 0.2);
+            const flagMat = new THREE.MeshBasicMaterial({ color: '#facc15', side: THREE.DoubleSide });
+            const flag = new THREE.Mesh(flagGeo, flagMat);
+            flag.position.set(-0.15, 0.9, 0);
+            boatGroup.add(flag);
+
+            return boatGroup;
+        }
+
+        // --- 3. KHỞI TẠO 2 KHỐI HỘP ĐỘC LẬP ---
+
+        // ==========================================
+        // KHỐI 1 (BÊN TRÁI) - LUÔN ĐỨNG YÊN
+        // ==========================================
+        const baseX1 = -10; // Đặt dịch sang trái
+
+        const glassBox1 = new THREE.Mesh(glassGeo, glassMat);
+        glassBox1.add(new THREE.LineSegments(glassLinesGeo, lineMat));
+        glassBox1.position.set(baseX1, 0, 0);
+        scene.add(glassBox1);
+
+        const water1 = new THREE.Mesh(waterGeo, waterMat);
+        water1.scale.set(7.9, 8, 7.9); // Đứng
+        water1.position.set(baseX1, 0, 0);
+        scene.add(water1);
+
+        const boat1 = createBoat();
+        boat1.position.set(baseX1, 8, 0);
+        scene.add(boat1);
+
+        // Các điểm gắn nhãn cho KHỐI 1
+        const pHTop = new THREE.Object3D();
+        const pHBot = new THREE.Object3D();
+        const pW = new THREE.Object3D();
+        const pD = new THREE.Object3D();
+        glassBox1.add(pHTop);
+        glassBox1.add(pHBot);
+        glassBox1.add(pW);
+        glassBox1.add(pD);
+        
+        pHTop.position.set(-boxWidth/2, boxHeight * 0.75, boxDepth/2); 
+        pHBot.position.set(-boxWidth/2, boxHeight * 0.25, boxDepth/2); 
+        pW.position.set(0, 0, boxDepth/2 + 0.1); 
+        pD.position.set(boxWidth/2 + 0.1, 0, 0); 
+
+        // ==========================================
+        // KHỐI 2 (BÊN PHẢI) - SẼ XOAY VÀ BIẾN ĐỔI THEO THANH TRƯỢT
+        // ==========================================
+        const baseX2 = 4; // Đặt dịch sang phải
+
+        const glassBox2 = new THREE.Mesh(glassGeo, glassMat);
+        glassBox2.add(new THREE.LineSegments(glassLinesGeo, lineMat));
+        scene.add(glassBox2);
+
+        const water2 = new THREE.Mesh(waterGeo, waterMat);
+        scene.add(water2);
+
+        const boat2 = createBoat();
+        scene.add(boat2);
+
+
+        // --- 4. ANIMATION LOGIC (Chỉ áp dụng cho KHỐI 2) ---
+        
+        let isAnswerRevealed = false;
+
+        function updatePositions(progress) {
+            // progress từ 0 (Đứng) đến 1 (Nằm)
+            
+            // 1. Cập nhật Hộp Kính 2
+            glassBox2.position.x = baseX2;
+            glassBox2.position.y = THREE.MathUtils.lerp(0, boxWidth/2, progress);
+            glassBox2.rotation.z = THREE.MathUtils.lerp(0, -Math.PI / 2, progress);
+
+            // 2. Cập nhật Nước 2 (Đã sửa lỗi tràn ra ngoài)
+            water2.scale.x = THREE.MathUtils.lerp(7.9, 15.9, progress);
+            water2.scale.y = THREE.MathUtils.lerp(8, 4, progress);
+            water2.scale.z = 7.9;
+
+            // Xử lý tọa độ X chuẩn xác để nước luôn nằm vừa trong hộp
+            // Khi đứng: tâm X là baseX2. Khi lật nằm sang phải (-90deg): tâm X dịch sang phải 8 đơn vị
+            water2.position.x = baseX2 + (8 * progress);
+
+            // Hiệu ứng "nước chao đảo" (Slosh effect)
+            const sloshAmount = Math.sin(progress * Math.PI); 
+            water2.rotation.z = sloshAmount * 0.15;
+
+            // 3. Cập nhật Thuyền 2
+            boat2.position.x = water2.position.x;
+            boat2.position.y = water2.scale.y; 
+            boat2.rotation.z = water2.rotation.z; 
+        }
+
+        // Khởi tạo vị trí ban đầu
+        updatePositions(0);
+
+        // --- 5. UI INTERACTION ---
+        const slider = document.getElementById('state-slider');
+        const textDung = document.getElementById('text-dung');
+        const textNam = document.getElementById('text-nam');
+        const btnAnswer = document.getElementById('btn-answer');
+        
+        slider.addEventListener('input', (e) => {
+            let val = e.target.value / 100;
+            updateUI(val);
+            updatePositions(val);
+        });
+
+        slider.addEventListener('change', (e) => {
+            let val = e.target.value / 100;
+            let targetVal = val > 0.5 ? 1 : 0;
+            
+            gsap.to(slider, {
+                value: targetVal * 100,
+                duration: 0.4,
+                ease: "back.out(1.5)",
+                onUpdate: () => {
+                    let p = slider.value / 100;
+                    updateUI(p);
+                    updatePositions(p);
+                },
+                onComplete: () => {
+                    gsap.to(water2.rotation, { z: 0, duration: 1, ease: "elastic.out(1, 0.3)" });
+                    gsap.to(boat2.rotation, { z: 0, duration: 1, ease: "elastic.out(1, 0.3)" });
+                }
+            });
+        });
+
+        function updateUI(progress) {
+            if (progress > 0.5) {
+                textDung.classList.replace('text-blue-600', 'text-gray-400');
+                textNam.classList.replace('text-gray-400', 'text-blue-600');
+                
+                if(!isAnswerRevealed) {
+                    btnAnswer.classList.remove('opacity-0', 'pointer-events-none');
+                    document.getElementById('question-text').innerText = "? cm";
+                    document.getElementById('question-text').className = "text-red-600 font-bold text-2xl bg-white/70 px-1 rounded-md drop-shadow-sm transition-colors";
+                }
+            } else {
+                textDung.classList.replace('text-gray-400', 'text-blue-600');
+                textNam.classList.replace('text-blue-600', 'text-gray-400');
+                
+                btnAnswer.classList.add('opacity-0', 'pointer-events-none');
+                isAnswerRevealed = false;
+                document.getElementById('question-text').innerText = "? cm";
+                document.getElementById('question-text').className = "text-red-600 font-bold text-2xl bg-white/70 px-1 rounded-md drop-shadow-sm transition-colors";
+            }
+        }
+
+        btnAnswer.addEventListener('click', () => {
+            isAnswerRevealed = true;
+            btnAnswer.classList.add('opacity-0', 'pointer-events-none');
+            
+            const qText = document.getElementById('question-text');
+            gsap.fromTo(qText, 
+                { scale: 1.5 }, 
+                { scale: 1, duration: 0.5, ease: "bounce.out" }
+            );
+            qText.innerText = "4 cm";
+            qText.className = "text-green-600 font-bold text-2xl bg-white/70 px-1 rounded-md drop-shadow-sm transition-colors"; 
+        });
+
+        // --- 6. RENDER LOOP & 2D PROJECTION ---
+        const labelHTop = document.getElementById('label-h-top');
+        const labelHBot = document.getElementById('label-h-bot');
+        const labelW = document.getElementById('label-w');
+        const labelD = document.getElementById('label-d');
+        const labelQuestion = document.getElementById('label-question');
+        const labelHinh1 = document.getElementById('label-hinh1');
+        const labelHinh2 = document.getElementById('label-hinh2');
+        
+        function updateLabels() {
+            const toScreenPosition = (obj, camera) => {
+                const vector = new THREE.Vector3();
+                obj.getWorldPosition(vector);
+                vector.project(camera);
+                
+                const x = (vector.x * .5 + .5) * window.innerWidth;
+                const y = (vector.y * -.5 + .5) * window.innerHeight;
+                return {x, y};
+            };
+
+            // Cập nhật các nhãn tĩnh của KHỐI 1 (Luôn hiển thị không bị mờ đi nữa)
+            const posHTop = toScreenPosition(pHTop, camera);
+            labelHTop.style.left = `${posHTop.x - 10}px`;
+            labelHTop.style.top = `${posHTop.y}px`;
+
+            const posHBot = toScreenPosition(pHBot, camera);
+            labelHBot.style.left = `${posHBot.x - 10}px`;
+            labelHBot.style.top = `${posHBot.y}px`;
+
+            const posW = toScreenPosition(pW, camera);
+            labelW.style.left = `${posW.x}px`;
+            labelW.style.top = `${posW.y}px`;
+
+            const posD = toScreenPosition(pD, camera);
+            labelD.style.left = `${posD.x + 10}px`;
+            labelD.style.top = `${posD.y}px`;
+
+            // Cập nhật tọa độ cho nhãn KHỐI 2 (Dấu ? cm)
+            const waterLeftEdgeWorld = new THREE.Vector3(
+                water2.position.x - water2.scale.x / 2, 
+                water2.position.y + water2.scale.y / 2, 
+                water2.position.z + water2.scale.z / 2  
+            );
+            waterLeftEdgeWorld.project(camera);
+            labelQuestion.style.left = `${(waterLeftEdgeWorld.x * .5 + .5) * window.innerWidth - 10}px`;
+            labelQuestion.style.top = `${(waterLeftEdgeWorld.y * -.5 + .5) * window.innerHeight}px`;
+            
+            // Logic ẩn hiện nhãn "?"
+            const p = slider.value / 100;
+            labelQuestion.style.opacity = p > 0.95 ? 1 : 0;
+            
+            // Cập nhật tọa độ và hiển thị nhãn "Hình 1" và "Hình 2"
+            const vecHinh1 = new THREE.Vector3(baseX1, 0, boxDepth/2);
+            vecHinh1.project(camera);
+            labelHinh1.style.left = `${(vecHinh1.x * .5 + .5) * window.innerWidth}px`;
+            labelHinh1.style.top = `${(vecHinh1.y * -.5 + .5) * window.innerHeight + 30}px`;
+
+            const vecHinh2 = new THREE.Vector3(water2.position.x, 0, boxDepth/2);
+            vecHinh2.project(camera);
+            labelHinh2.style.left = `${(vecHinh2.x * .5 + .5) * window.innerWidth}px`;
+            labelHinh2.style.top = `${(vecHinh2.y * -.5 + .5) * window.innerHeight + 30}px`;
+
+            labelHinh1.style.opacity = p > 0.95 ? 1 : 0;
+            labelHinh2.style.opacity = p > 0.95 ? 1 : 0;
+        }
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Hiệu ứng nhấp nhô độc lập cho cả 2 thuyền
+            const time = clock.getElapsedTime();
+            boat1.position.y = water1.scale.y + Math.sin(time * 3) * 0.05;
+            
+            if (slider.value == 0 || slider.value == 100) {
+                 boat2.position.y = water2.scale.y + Math.sin(time * 3 + 1) * 0.05;
+            }
+
+            updateLabels();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
